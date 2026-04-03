@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Movie Charades</title>
+<style>
+:root {
+  --bg1:#090616; --bg2:#171133; --bg3:#251755; --bg4:#3a1f73; --bg5:#5d2da3;
+  --line:rgba(255,255,255,.14); --text:#f8f2ff; --muted:rgba(248,242,255,.74);
+  --gold:#ffe69b; --shadow:0 18px 45px rgba(2,0,12,.40);
+}
+* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body { height:100%; margin:0; }
+body {
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(circle at 14% 22%, rgba(255,156,230,.33), transparent 22%),
+    radial-gradient(circle at 84% 16%, rgba(155,239,255,.24), transparent 20%),
+    radial-gradient(circle at 75% 76%, rgba(214,177,255,.22), transparent 24%),
+    radial-gradient(circle at 20% 82%, rgba(255,230,155,.13), transparent 22%),
+    linear-gradient(180deg,var(--bg1),var(--bg2) 28%,var(--bg3) 58%,var(--bg4) 82%,var(--bg5));
+  overflow:hidden; position:relative;
+}
+body::before { content:""; position:fixed; inset:0; pointer-events:none;
+  background:
+    radial-gradient(circle at 10% 18%, rgba(255,255,255,.8) 0 1.3px, transparent 1.9px),
+    radial-gradient(circle at 18% 36%, rgba(255,255,255,.65) 0 1.2px, transparent 1.8px),
+    radial-gradient(circle at 31% 12%, rgba(255,255,255,.7) 0 1.5px, transparent 2px),
+    radial-gradient(circle at 58% 16%, rgba(255,255,255,.7) 0 1.4px, transparent 2px),
+    radial-gradient(circle at 82% 26%, rgba(255,255,255,.55) 0 1.2px, transparent 1.8px),
+    radial-gradient(circle at 92% 44%, rgba(255,255,255,.7) 0 1.3px, transparent 2px);
+  opacity:.95;
+}
+.decor { position:fixed; inset:0; pointer-events:none; z-index:0; }
+.castle,.moon,.cloud,.spark,.lamp { position:absolute; opacity:.18; user-select:none; }
+.castle { left:3.8vw; bottom:4vh; font-size:min(13vh,74px); }
+.lamp { left:50%; top:6.8vh; transform:translateX(-50%); font-size:min(9vh,54px); opacity:.14; }
+.moon { right:6vw; top:10vh; font-size:min(11vh,66px); }
+.cloud { height:36px; border-radius:999px; background:rgba(255,255,255,.09); }
+.c1 { width:108px; left:10vw; top:22vh; }
+.c2 { width:136px; right:14vw; top:24vh; }
+.c3 { width:92px; left:25vw; bottom:18vh; }
+.spark { width:14px; height:14px; border-radius:50%; background:radial-gradient(circle, rgba(255,255,255,.95), rgba(255,255,255,0)); }
+.s1 { left:20vw; top:14vh; } .s2 { left:72vw; top:20vh; } .s3 { left:61vw; bottom:16vh; } .s4 { left:38vw; top:25vh; }
+
+.app {
+  position:relative; z-index:1; height:100%; width:min(1200px,100%);
+  margin:0 auto; padding:10px; display:grid; grid-template-columns:1.08fr .92fr; gap:10px;
+}
+.glass {
+  background:linear-gradient(180deg, rgba(255,255,255,.11), rgba(255,255,255,.05));
+  border:1px solid var(--line); box-shadow:var(--shadow);
+  backdrop-filter:blur(18px) saturate(130%); -webkit-backdrop-filter:blur(18px) saturate(130%);
+}
+.left,.right { display:grid; gap:10px; min-height:0; }
+.left { grid-template-rows:auto 1fr auto; }
+.right { grid-template-rows:auto auto 1fr; }
+
+.topbar {
+  border-radius:28px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:
+    linear-gradient(130deg, rgba(255,255,255,.12), rgba(255,255,255,.04)),
+    radial-gradient(circle at left, rgba(255,156,230,.16), transparent 34%),
+    radial-gradient(circle at right, rgba(155,239,255,.12), transparent 28%);
+}
+.brand small {
+  display:inline-flex; align-items:center; gap:8px; padding:7px 11px; border-radius:999px;
+  background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.11);
+  color:var(--gold); font-size:.72rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase;
+}
+.brand h1 { margin:8px 0 4px; font-size:clamp(1.8rem,4.2vw,3.2rem); line-height:.9; letter-spacing:-.05em; }
+.brand p { margin:0; color:var(--muted); font-size:.92rem; max-width:42ch; line-height:1.3; }
+.hud { display:grid; gap:8px; min-width:220px; }
+.hud-card {
+  padding:10px 12px; border-radius:20px; background:rgba(12,10,27,.52); border:1px solid var(--line);
+  display:grid; grid-template-columns:auto 1fr; gap:8px 10px; align-items:center;
+}
+.hud-card .icon { font-size:1.25rem; }
+.hud-card .label { font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; font-weight:800; }
+.hud-card .value { font-weight:900; font-size:1.1rem; line-height:1; }
+
+.stage {
+  border-radius:34px; padding:12px; display:grid; grid-template-rows:auto 1fr auto; gap:10px; min-height:0;
+  background:radial-gradient(circle at 30% 18%, rgba(255,255,255,.10), transparent 20%), linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04));
+}
+.tabs {
+  display:grid !important;
+  grid-template-columns:repeat(5,minmax(0,1fr)) !important;
+  gap:8px !important;
+  width:100% !important;
+  visibility:visible !important;
+  opacity:1 !important;
+  min-height:44px !important;
+}
+.tab {
+  display:block !important;
+  width:100% !important;
+  padding:10px 8px; border:none; border-radius:999px; cursor:pointer;
+  background:linear-gradient(135deg, #fff0b8, #ffafe1 40%, #94ebff 70%, #d0a5ff);
+  box-shadow:0 8px 18px rgba(0,0,0,.18);
+  color:#14091f; font-weight:900; font-size:.84rem;
+}
+.tab.active { outline:2px solid rgba(255,255,255,.44); filter:brightness(1.05); }
+.bubble-wrap { display:grid; place-items:center; min-height:0; position:relative; overflow:hidden; padding:4px 0; }
+.bubble-shell {
+  position:relative; display:inline-grid; place-items:center; padding:8px; border-radius:999px;
+  background:rgba(170,134,255,.12); border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 18px 34px rgba(27,6,62,.28), 0 0 34px rgba(140,96,230,.18);
+}
+.bubble {
+  position:relative; min-width:min(60vw,300px); max-width:min(70vw,360px); min-height:74px;
+  padding:15px 52px 16px; border-radius:999px; display:flex; align-items:center; justify-content:center; text-align:center;
+  background:rgba(241,234,255,.92); border:1px solid rgba(255,255,255,.58);
+  box-shadow:0 12px 26px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.78), inset 0 -10px 18px rgba(120,74,196,.09), 0 0 0 3px rgba(164,121,255,.12);
+  color:#26133f; font-size:clamp(1rem,2.8vw,1.45rem); font-weight:1000; line-height:1.08; letter-spacing:-.03em; text-shadow:0 1px 0 rgba(255,255,255,.45); overflow:hidden;
+}
+.bubble-title-decor,.bubble-title-decor-right {
+  position:absolute; top:50%; transform:translateY(-50%); font-size:1rem; font-weight:900; pointer-events:none;
+  color:rgba(110,69,193,.82); text-shadow:0 0 12px rgba(173,145,255,.45);
+}
+.bubble-title-decor { left:18px; } .bubble-title-decor-right { right:18px; }
+.actions { display:grid; grid-template-columns:1.2fr .9fr .9fr; gap:8px; }
+.action-main,.pill-btn,.small-btn,.score-btn {
+  border:none; cursor:pointer; color:#14091f; font-weight:900; font-family:inherit;
+  background:linear-gradient(135deg, #ffe69b, #ff9ce6 36%, #9befff 68%, #d7b1ff); box-shadow:0 10px 22px rgba(0,0,0,.20);
+}
+.action-main { padding:14px 16px; border-radius:22px; font-size:1rem; }
+.pill-btn { padding:12px 14px; border-radius:18px; font-size:.94rem; }
+.small-btn { padding:10px 12px; border-radius:14px; font-size:.86rem; }
+.circle-btn {
+  width:40px; height:40px; border:none; border-radius:14px; cursor:pointer; font-size:1rem; display:grid; place-items:center;
+  background:rgba(255,255,255,.08); color:var(--text); border:1px solid var(--line);
+}
+.panel,.teams-panel { border-radius:28px; padding:12px; }
+.panel-title { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
+.panel-title h2 { margin:0; font-size:1rem; letter-spacing:-.02em; }
+.panel-title span { font-size:.78rem; color:var(--muted); font-weight:700; }
+.timer-grid { display:grid; gap:8px; }
+input,select {
+  width:100%; border:none; outline:none; border-radius:14px; padding:11px 12px;
+  background:rgba(8,6,20,.56); border:1px solid rgba(255,255,255,.12); color:var(--text); font:inherit;
+}
+select {
+  appearance:none; -webkit-appearance:none; padding-right:34px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(248,242,255,.9) 50%),
+    linear-gradient(135deg, rgba(248,242,255,.9) 50%, transparent 50%);
+  background-position:calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px);
+  background-size:6px 6px, 6px 6px; background-repeat:no-repeat;
+}
+input::placeholder { color:rgba(248,242,255,.44); }
+.custom-row { display:flex; flex-wrap:nowrap; align-items:center; gap:8px; width:100%; }
+.custom-row input { flex:1 1 auto; min-width:0; width:auto; }
+.custom-row .small-btn { flex:0 0 auto; white-space:nowrap; min-width:64px; }
+.team-add { display:grid; grid-template-columns:1fr auto; gap:8px; }
+.teams-panel { display:grid; grid-template-rows:auto 1fr; gap:10px; min-height:0; }
+.team-list { display:grid; gap:8px; overflow:auto; padding-right:2px; }
+.team-card {
+  border-radius:22px; padding:10px; background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.05));
+  border:1px solid var(--line); display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center;
+}
+.team-card.active { border-color:rgba(255,230,155,.55); box-shadow:inset 0 0 0 1px rgba(255,230,155,.28); }
+.team-info { min-width:0; }
+.team-name { font-weight:900; font-size:1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.team-sub { font-size:.78rem; color:var(--muted); margin-top:2px; }
+.team-edit { display:grid; grid-template-columns:1fr auto; gap:8px; margin-top:7px; }
+.score-box { display:grid; justify-items:center; gap:8px; }
+.score-value { font-size:1.6rem; font-weight:1000; line-height:1; }
+.score-actions { display:flex; gap:6px; }
+.score-btn { width:40px; height:40px; border-radius:14px; font-size:1rem; display:grid; place-items:center; }
+
+.top-scores-panel{
+  border-radius:24px;
+  padding:10px 12px;
+  display:grid;
+  gap:8px;
+}
+.top-scores-title{
+  font-size:.78rem;
+  color:var(--muted);
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.top-scores{
+  display:flex;
+  gap:8px;
+  overflow:auto;
+  padding-bottom:2px;
+}
+.top-score-pill{
+  flex:0 0 auto;
+  padding:10px 12px;
+  border-radius:16px;
+  border:1px solid var(--line);
+  background:rgba(12,10,27,.52);
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:max-content;
+}
+.top-score-pill.active{
+  border-color:rgba(255,230,155,.55);
+  box-shadow:inset 0 0 0 1px rgba(255,230,155,.22);
+}
+.top-score-name{
+  font-weight:900;
+  font-size:.92rem;
+}
+.top-score-points{
+  color:var(--gold);
+  font-weight:1000;
+}
+
+.footer-note { font-size:.75rem; color:var(--muted); text-align:center; padding-top:2px; }
+
+@media (max-width:980px) {
+  .app { grid-template-columns:1fr; grid-template-rows:auto auto; overflow:auto; height:auto; min-height:100%; padding-bottom:14px; }
+  body { overflow:auto; }
+  .left,.right { grid-template-rows:auto auto auto; }
+}
+@media (max-width:700px) {
+  .app { padding:8px; gap:8px; }
+  .topbar { display:grid; grid-template-columns:1fr; }
+  .hud { grid-template-columns:1fr 1fr; min-width:0; }
+  .tabs { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+  .actions { grid-template-columns:1fr 1fr; }
+  .actions .action-main { grid-column:1/-1; }
+}
+@media (max-width:430px) {
+  .hud { grid-template-columns:1fr; }
+  .tab { font-size:.8rem; padding:9px 7px; }
+  .score-btn,.circle-btn { width:36px; height:36px; border-radius:12px; }
+  .action-main,.pill-btn { font-size:.9rem; }
+}
+</style>
+</head>
+<body>
+<audio id="timerEndSound" preload="auto" playsinline src="data:audio/wav;base64,UklGRi6bAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQqbAAAAAAoAJwBUAIwAygAFATcBWQFjAVIBIgHTAGYA4f9J/6f+Bf5u/e78j/xb/Fj8jPz4/Jr9bP5n/3wAoAHBAs8DuQRvBeMFDAbiBWMFkQR1AxkCjwDp/j79pPsz+gL5JPio95n3/vfU+BX6tPue/bv/7gEdBCcG8AddCVYKzAqyCgYKzAgRB+kEbQK///78Uvrg98n1LvQo88jyGPMZ9MH1/ve1+sb9BwFPBHIHQwqbDFcOXQ+ZDwUPpA2DC7sIbwXIAfb9KvqZ9nPz5vAW7yDuFe777srwbfPG9qr66f5JA5MHiwv6DrARhRNdFCcU4xKcEG0NfQn9BCcAPPt79ifyeu6p69zpMem16WTrLu7x8X72nPsGAXkGqAtQEC4UDBfBGDEZUhgrFtQSdg5ICYwDjv2b9wXyFu0U6TbmqOSB5Mnlc+hg7GDxMveM/RoEhwp7EKUVvhmMHOUdtB32G74YMhSMDhMIHAED+iTz3eyE52Pjs+Cd3zTgdOJF5nfryfHp+HoAGghiD/AVaxuHHwkizSLCIfMegRqiFKEN2QWx/ZL16+0h55Lhit1E2+LabdzW3/Pkhes386X7YAT2DPMU7BuBIWUlXydSJzklLCFcGxMUrgucAlT5T/AH6O3gYdux1xHWnNZP2QrelOSY7K/1Y/8yCZwSIRtPIsMnMStnLFEr+CeFIjsbeRKwCGH+EvRO6pfhZNoY1fzRPtHt0vfWKt055bruNPkaBN8O8hjMIfUoCi7FMPswpy7hKeciDxrND6cEMPn+7ajjudqq09zOk8zyzPjPgtVL3e/m8PG//b8JUxXfH9Qoui8xNPk19zQzMdsqPiLNFw0MnP8a8zDnfdyQ0+TM1Micx0/J280K1X7ev+k59kgDQBB0HEEnFTB3Ng86qTo5ONkyzip9IG0UPAeY+TTsw9/s1EHMOsYpwzzDd8azzKLV0OCt7ZH7wgmGFyYk9y5oNwQ9fj+wPp86fjOnKZkd8Q9iAa7yleTV1xrN9MTTvwC+mL+JxJfMWtdI5Ljy6gEYEXcfRyzcNqY+OkNXROpBDjwMM1knjRlbCo368upa3IrPLcXQvdm5gbnQvKDDm80/2uno1/g4CTMZ8yezNMc+pUXvSHRIN0RqPHIx2yNYFLQDzPJ+4qXTBsdOvf+2crTOtQW71cPQz1jesO4AAFsR0CGFMLg8xkU4S8ZMWkoWREw6fi1VHpoNLfzw6svak8wEwbe4GrRrs7O2xb1EyKbVOeUu9qUHtxiCKDU2GUGfSGNMM0wSSDZACDUbJygXAwaO9LHjStQmx/S8OrZQs1+0V7n4wc7NPdyG7ND9Nw/VH84uWjvVRL9KzEzfShJFszs8L1UgwA9c/g3tudw4zkvCj7l4tEmzE7awvMnG19Mv4wT0dwWiFqImojTpP+FHIUxxTMxIY0GXNvkoPBkwCLn2vOUb1qXIDL7dtnazBrSDuLTAK8xR2mrqofsQDdQdDS3xOdVDN0rCTFRLAEYNPfEwTSLjEYwALu+u3ujPn8N1uuW0N7ODtam7WcUS0irh3PFIA4kUuiQFM6w+FEfQS59Md0mCQhw4zipKG1wK5vjN5/XXL8oyv4+3rLO8s763fb+Tym3YUuhy+ecKzRtCK3s4x0KfSahMuUvfRlo+nDI/JAIUvAJS8argotH/xGq7YbU1swO1sbr2w1XQLd+37xgBaxLKIl0xYT05Rm5LvUwSSpNDlDmbLFMdhgwV++Tp19nEy2XAUbjys4KzCLdUvgbJkdZA5kT3vAjAGW8p+jasQfhIfkwOTK9Hmz88NCkmHBbrBHrzreJl02zGbbzutUOzkrTHuZ/Co8423ZXt6P5JENMgqy8KPE9F/UrLTJ9KlkQBO14uVh+uDkT9/uvB22TNpsEhuUe0WLNhtjm9hce+1DPkGfWOBq4XkydtNYNAQkhETFRMcUjOQNE1CygzGBoHpPW25DLV5Md+vYm2YbMwtOy4VMH7zEbbd+u4/CQO1h7uLac6V0R9SslMG0uLRWE8GDBSIdIQdP8d7rPdD8/zwgC6rLQ+s8m1K7wPxvPSLOLw8l8ElhWvJdUzTD99R/pLikwjSfRBWzflKUQaRwnQ98TmB9dpyZ2+NLePs9+zH7gXwF7LXtle6Yn6/AvRHCksNzlQQ+1Jt0yIS3FGtT3IMUcj8xKkAUDwq9/E0E3E7rohtTSzQbUru6bEMtEr4MnwMAJ6E8MjMjIIPqlGoUuwTMZJDEPaOLYrTxxyC/352Ojl2PjKyr/ut82znbNht+e+y8l+10nnW/jSCccaWiq8NztCTUmVTOZLSUf8Pm0zNSUQFdMDZvKr4YLStMXqu6a1OrPItDq6SMN7zzDepe4AAFsR0CGFMLg8xkU4S8ZMWkoWREw6fi1VHpoNLfzw6svak8wEwbe4GrRrs7O2xb1EyKbVOeUu9qUHtxiCKDU2GUGfSGNMM0wSSDZACDUbJygXAwaO9LHjStQmx/S8OrZQs1+0V7n4wc7NPdyG7ND9Nw/VH84uWjvVRL9KzEzfShJFszs8L1UgwA9c/g3tudw4zkvCj7l4tEmzE7awvMnG19Mv4wT0dwWiFqImojTpP+FHIUxxTMxIY0GXNvkoPBkwCLn2vOUb1qXIDL7dtnazBrSDuLTAK8xR2mrqofsQDdQdDS3xOdVDN0rCTFRLAEYNPfEwTSLjEYwALu+u3ujPn8N1uuW0N7ODtam7WcUS0irh3PFIA4kUuiQFM6w+FEfQS59Md0mCQhw4zipKG1wK5vjN5/XXL8oyv4+3rLO8s763fb+Tym3YUuhy+ecKzRtCK3s4x0KfSahMuUvfRlo+nDI/JAIUvAJS8argotH/xGq7YbU1swO1sbr2w1XQLd+37xgBaxLKIl0xYT05Rm5LvUwSSpNDlDmbLFMdhgwV++Tp19nEy2XAUbjys4KzCLdUvgbJkdZA5kT3vAjAGW8p+jasQfhIfkwOTK9Hmz88NCkmHBbrBHrzreJl02zGbbzutUOzkrTHuZ/Co8423ZXt6P5JENMgqy8KPE9F/UrLTJ9KlkQBO14uVh+uDkT9/uvB22TNpsEhuUe0WLNhtjm9hce+1DPkGfWOBq4XkydtNYNAQkhETFRMcUjOQNE1CygzGBoHpPW25DLV5Md+vYm2YbMwtOy4VMH7zEbbd+u4/CQO1h7uLac6V0R9SslMG0uLRWE8GDBSIdIQdP8d7rPdD8/zwgC6rLQ+s8m1K7wPxvPSLOLw8l8ElhWvJdUzTD99R/pLikwjSfRBWzflKUQaRwnQ98TmB9dpyZ2+NLePs9+zH7gXwF7LXtle6Yn6/AvRHCksNzlQQ+1Jt0yIS3FGtT3IMUcj8xKkAUDwq9/E0E3E7rohtTSzQbUru6bEMtEr4MnwMAJ6E8MjMjIIPqlGoUuwTMZJDEPaOLYrTxxyC/352Ojl2PjKyr/ut82znbNht+e+y8l+10nnW/jSCccaWiq8NztCTUmVTOZLSUf8Pm0zNSUQFdMDZvKr4YLStMXqu6a1OrPItDq6SMN7zzDepe4AAFsR0CGFMLg8xkU4S8ZMWkoWREw6fi1VHpoNLfzw6svak8wEwbe4GrRrs7O2xb1EyKbVOeUu9qUHtxiCKDU2GUGfSGNMM0wSSDZACDUbJygXAwaO9LHjStQmx/S8OrZQs1+0V7n4wc7NPdyG7ND9Nw/VH84uWjvVRL9KzEzfShJFszs8L1UgwA9c/g3tudw4zkvCj7l4tEmzE7awvMnG19Mv4wT0dwWiFqImojTpP+FHIUxxTMxIY0GXNvkoPBkwCLn2vOUb1qXIDL7dtnazBrSDuLTAK8xR2mrqofsQDdQdDS3xOdVDN0rCTFRLAEYNPfEwTSLjEYwALu+u3ujPn8N1uuW0N7ODtam7WcUS0irh3PFIA4kUuiQFM6w+FEfQS59Md0mCQhw4zipKG1wK5vjN5/XXL8oyv4+3rLO8s763fb+Tym3YUuhy+ecKzRtCK3s4x0KfSahMuUvfRlo+nDI/JAIUvAJS8argotH/xGq7YbU1swO1sbr2w1XQLd+37xgBaxLKIl0xYT05Rm5LvUwSSpNDlDmbLFMdhgwV++Tp19nEy2XAUbjys4KzCLdUvgbJkdZA5kT3vAjAGW8p+jasQfhIfkwOTK9Hmz88NCkmHBbrBHrzreJl02zGbbzutUOzkrTHuZ/Co8423ZXt6P5JENMgqy8KPE9F/UrLTJ9KlkQBO14uVh+uDkT9/uvB22TNpsEhuUe0WLNhtjm9hce+1DPkGfWOBq4XkydtNYNAQkhETFRMcUjOQNE1CygzGBoHpPW25DLV5Md+vYm2YbMwtOy4VMH7zEbbd+u4/CQO1h7uLac6V0R9SslMG0uLRWE8GDBSIdIQdP8d7rPdD8/zwgC6rLQ+s8m1K7wPxvPSLOLw8l8ElhWvJdUzTD99R/pLikwjSfRBWzflKUQaRwnQ98TmB9dpyZ2+NLePs9+zH7gXwF7LXtle6Yn6/AvRHCksNzlQQ+1Jt0yIS3FGtT3IMUcj8xKkAUDwq9/E0E3E7rohtTSzQbUru6bEMtEr4MnwMAJ6E8MjMjIIPqlGoUuwTMZJDEPaOLYrTxxyC/352Ojl2PjKyr/ut82znbNht+e+y8l+10nnW/jSCccaWiq8NztCTUmVTOZLSUf8Pm0zNSUQFdMDZvKr4YLStMXqu6a1OrPItDq6SMN7zzDepe4AAFsR0CGFMLg8xkU4S8ZMWkoWREw6fi1VHpoNLfzw6svak8wEwbe4GrRrs7O2xb1EyKbVOeUu9qUHtxiCKDU2GUGfSGNMM0wSSDZACDUbJygXAwaO9LHjStQmx/S8OrZQs1+0V7n4wc7NPdyG7ND9Nw/VH84uWjvVRL9KzEzfShJFszs8L1UgwA9c/g3tudw4zkvCj7l4tEmzE7awvMnG19Mv4wT0dwWiFqImojTpP+FHIUxxTMxIY0GXNvkoPBkwCLn2vOUb1qXIDL7dtnazBrSDuLTAK8xR2mrqofsQDdQdDS3xOdVDN0rCTFRLAEYNPfEwTSLjEYwALu+u3ujPn8N1uuW0N7ODtam7WcUS0irh3PFIA4kUuiQFM6w+FEfQS59Md0mCQhw4zipKG1wK5vjN5/XXL8oyv4+3rLO8s763fb+Tym3YUuhy+ecKzRtCK3s4x0KfSahMuUvfRlo+nDI/JAIUvAJS8argotH/xGq7YbU1swO1sbr2w1XQLd+37xgBaxLKIl0xYT05Rm5LvUwSSpNDlDmbLFMdhgwV++Tp19nEy2XAUbjys4KzCLdUvgbJkdZA5kT3vAjAGW8p+jasQfhIfkwOTK9Hmz88NCkmHBbrBHrzreJl02zGbbzutUOzkrTHuZ/Co8423ZXt6P5JENMgqy8KPE9F/UrLTJ9KlkQBO14uVh+uDkT9/uvB22TNpsEhuUe0WLNhtjm9hce+1DPkGfWOBq4XkydtNYNAQkhETFRMcUjOQNE1CygzGBoHpPW25DLV5Md+vYm2YbMwtOy4VMH7zEbbd+u4/CQO1h7uLac6V0R9SslMG0uLRWE8GDBSIdIQdP8d7rPdD8/zwgC6rLQ+s8m1K7wPxvPSLOLw8l8ElhWvJdUzTD99R/pLikwjSfRBWzflKUQaRwnQ98TmB9dpyZ2+NLePs9+zH7gXwF7LXtle6Yn6/AvRHCksNzlQQ+1Jt0yIS3FGtT3IMUcj8xKkAUDwq9/E0E3E7rohtTSzQbUru6bEMtEr4MnwMAJ6E8MjMjIIPqlGoUuwTMZJDEPaOLYrTxxyC/352Ojl2PjKyr/ut82znbNht+e+y8l+10nnW/jSCccaWiq8NztCTUmVTOZLSUf8Pm0zNSUQFdMDZvKr4YLStMXqu6a1OrPItDq6SMN7zzDepe4AAFsR0CGFMLg8xkU4S8ZMWkoWREw6fi1VHpoNLfzw6svak8wEwbe4GrRrs7O2xb1EyKbVOeUu9qUHtxiCKDU2GUGfSGNMM0wSSDZACDUbJygXAwaO9LHjStQmx/S8OrZQs1+0V7n4wc7NPdyG7ND9Nw/VH84uWjvVRL9KzEzfShJFszs8L1UgwA9c/g3tudw4zkvCj7l4tEmzE7awvMnG19Mv4wT0dwWiFqImojTpP+FHIUxxTMxIY0GXNvkoPBkwCLn2vOUb1qXIDL7dtnazBrSDuLTAK8xR2mrqofsQDdQdDS3xOdVDN0rCTFRLAEYNPfEwTSLjEYwALu+u3ujPn8N1uuW0N7ODtam7WcUS0irh3PFIA4kUuiQFM6w+FEfQS59Md0mCQhw4zipKG1wK5vjN5/XXL8oyv4+3rLO8s763fb+Tym3YUuhy+ecKzRtCK3s4x0KfSahMuUvfRlo+nDI/JAIUvAJS8argotH/xGq7YbU1swO1sbr2w1XQLd+37xgBaxLKIl0xYT05Rm5LvUwSSpNDlDmbLFMdhgwV++Tp19nEy2XAUbjys4KzCLdUvgbJkdZA5kT3vAjAGW8p+jasQfhIfkwOTK9Hmz88NCkmHBbrBHrzreJl02zGbbzutUOzkrTHuZ/Co8423ZXt6P5JENMgqy8KPE9F/UrLTJ9KlkQBO14uVh+uDkT9/uvB22TNpsEhuUe0WLNhtjm9hce+1DPkGfWOBq4XkydtNYNAQkhETFRMcUjOQNE1CygzGBoHpPW25DLV5Md+vYm2YbMwtOy4VMH7zEbbd+u4/CQO1h7uLac6V0R9SslMG0uLRWE8GDBSIdIQdP8d7rPdD8/zwgC6rLQ+s8m1K7wPxvPSLOLw8l8ElhWvJdUzTD99R/pLikwjSfRBWzflKUQaRwnQ98TmB9dpyZ2+NLePs9+zH7gXwF7LXtle6Yn6/AvRHCksNzlQQ+1Jt0yIS3FGtT3IMUcj8xKkAUDwq9/E0E3E7rohtTSzQbUru6bEMtEr4MnwMAJ6E8MjMjIIPqlGoUuwTMZJDEPaOLYrTxxyC/352Ojl2PjKyr/ut82znbNht+e+y8l+10nnW/jSCccaWiq8NztCTUmVTOZLSUf8Pm0zNSUQFdMDZvKr4YLStMXqu6a1OrPItDq6SMN7zzDepe4AAFsR0CGFMLg8xkU4S8ZMWkoWREw6fi1VHpoNLfzw6svak8wEwbe4GrRrs7O2xb1EyKbVOeUu9qUHtxiCKDU2GUGfSGNMM0wSSDZACDUbJygXAwaO9LHjStQmx/S8OrZQs1+0V7n4wc7NPdyG7ND9Nw/VH84uWjvVRL9KzEzfShJFszs8L1UgwA9c/g3tudw4zkvCj7l4tEmzE7awvMnG19Mv4wT0dwWiFqImojTpP+FHIUxxTMxIY0GXNvkoPBkwCLn2vOUb1qXIDL7dtnazBrSDuLTAK8xR2mrqofsQDdQdDS3xOdVDN0rCTFRLAEYNPfEwTSLjEYwALu+u3ujPn8N1uuW0N7ODtam7WcUS0irh3PFIA4kUuiQFM6w+FEfQS59Md0mCQhw4zipKG1wK5vjN5/XXL8oyv4+3rLO8s763fb+Tym3YUuhy+ecKzRtCK3s4x0KfSahMuUvfRlo+nDI/JAIUvAJS8argotH/xGq7YbU1swO1sbr2w1XQLd+37xgBaxLKIl0xYT05Rm5LvUwSSpNDlDmbLFMdhgwV++Tp19nEy2XAUbjys4KzCLdUvgbJkdZA5kT3vAjAGW8p+jasQfhIfkwOTK9Hmz88NCkmHBbrBHrzreJl02zGbbzutUOzkrTHuZ/Co8423ZXt6P5JENMgqy8KPE9F/UrLTJ9KlkQBO14uVh+uDkT9/uvB22TNpsEhuUe0WLNhtjm9hce+1DPkGfWOBq4XkydtNYNAQkhETFRMcUjOQNE1CygzGBoHpPW25DLV5Md+vYm2YbMwtOy4VMH7zEbbd+u4/CQO1h7uLac6V0R9SslMG0uLRWE8GDBSIdIQdP8d7rPdD8/zwgC6rLQ+s8m1K7wPxvPSLOLw8l8ElhWvJdUzTD99R/pLikwjSfRBWzflKUQaRwnQ98TmB9dpyZ2+NLePs9+zH7gXwF7LXtle6Yn6/AvRHCksNzlQQ+1Jt0yIS3FGtT3IMUcj8xKkAUDwq9/E0E3E7rohtTSzQbUru6bEMtEr4MnwMAJ6E8MjMjIIPqlGoUuwTMZJDEPaOLYrTxxyC/352Ojl2PjKyr/ut82znbNht+e+y8l+10nnW/jSCccaWiq8NztCTUmVTOZLSUf8Pm0zNSUQFdMDZvKr4YLStMXqu6a1OrPItDq6SMN7zzDepe4AAFsR0CGFMLg8xkU4S8ZMWkoWREw6fi1VHpoNLfzw6svak8wEwbe4GrRrs7O2xb1EyKbVOeUu9qUHtxiCKDU2GUGfSGNMM0wSSDZACDUbJygXAwaO9LHjStQmx/S8OrZQs1+0V7n4wc7NPdyG7ND9Nw/VH84uWjvVRL9KzEzfShJFszs8L1UgwA9c/g3tudw4zkvCj7l4tEmzE7awvMnG19Mv4wT0dwWiFqImojTpP+FHIUxxTMxIY0GXNvkoPBkwCLn2vOUb1qXIDL7dtnazBrSDuLTAK8xR2mrqofsQDdQdDS3xOdVDN0rCTFRLAEYNPfEwTSLjEYwALu+u3ujPn8N1uuW0N7ODtam7WcUS0irh3PFIA4kUuiQFM6w+FEfQS59Md0mCQhw4zipKG1wK5vjN5/XXL8oyv4+3rLO8s763fb+Tym3YUuhy+ecKzRtCK3s4x0KfSahMuUvfRlo+nDI/JAIUvAJS8argotH/xGq7YbU1swO1sbr2w1XQLd+37xgBaxLKIl0xYT05Rm5LvUwSSpNDlDmbLFMdhgwV++Tp19nEy2XAUbjys4KzCLdUvgbJkdZA5kT3vAjAGW8p+jasQfhIfkwOTK9Hmz88NCkmHBbrBHrzreJl02zGbbzutUOzkrTHuZ/Co8423ZXt6P5JENMgqy8KPE9F/UrLTJ9KlkQBO14uVh+uDkT9/uvB22TNpsEhuUe0WLNhtjm9hce+1DPkGfWOBq4XkydtNYNAQkhETFRMcUjOQNE1CygzGBoHpPW25DLV5Md+vYm2YbMwtOy4VMH7zEbbd+u4/CQO1h7uLac6V0R9SslMG0uLRWE8GDBSIdIQdP8d7rPdD8/zwgC6rLQ+s8m1K7wPxvPSLOLw8l8ElhWvJdUzTD99R/pLikwjSfRBWzflKUQaRwnQ98TmB9dpyZ2+NLePs9+zH7gXwF7LXtle6Yn6/AvRHCksNzlQQ+1Jt0yIS3FGtT3IMUcj8xKkAUDwq9/E0E3E7rohtTSzQbUru6bEMtEr4MnwMAJ6E8MjMjIIPqlGoUuwTMZJDEPaOLYrTxxyC/352Ojl2PjKyr/ut82znbNht+e+y8l+10nnW/jSCccaWiq8NztCTUmVTOZLSUf8Pm0zNSUQFdMDZvKr4YLStMXqu6a1OrPItDq6SMN7zzDepe4AAFsR0CGFMLg8xkU4S8ZMWkoWREw6fi1VHpoNLfzw6svak8wEwbe4GrRrs7O2xb1EyKbVOeUu9qUHtxiCKDU2GUGfSGNMM0wSSDZACDUbJygXAwaO9LHjStQmx/S8OrZQs1+0V7n4wc7NPdyG7ND9Nw/VH84uWjvVRL9KzEzfShJFszs8L1UgwA9c/g3tudw4zkvCj7l4tEmzE7awvMnG19Mv4wT0dwWiFqImojTpP+FHIUxxTMxIY0GXNvkoPBkwCLn2vOUb1qXIDL7dtnazBrSDuLTAK8xR2mrqofsQDdQdDS3xOdVDN0rCTFRLAEYNPfEwTSLjEYwALu+u3ujPn8N1uuW0N7ODtam7WcUS0irh3PFIA4kUuiQFM6w+FEfQS59Md0mCQhw4zipKG1wK5vjN5/XXL8oyv4+3rLO8s763fb+Tym3YUuhy+ecKzRtCK3s4x0KfSahMuUvfRlo+nDI/JAIUvAJS8argotH/xGq7YbU1swO1sbr2w1XQLd+37xgBaxLKIl0xYT05Rm5LvUwSSpNDlDmbLFMdhgwV++Tp19nEy2XAUbjys4KzCLdUvgbJkdZA5kT3vAjAGW8p+jasQfhIfkwOTK9Hmz88NCkmHBbrBHrzreJl02zGbbzutUOzkrTHuZ/Co8423ZXt6P5JENMgqy8KPE9F/UrLTJ9KlkQBO14uVh+uDkT9/uvB22TNpsEhuUe0WLNhtjm9hce+1DPkGfWOBq4XkydtNYNAQkhETFRMcUjOQNE1CygzGBoHpPW25DLV5Md+vYm2YbMwtOy4VMH7zEbbd+u4/CQO1h7uLac6V0R9SslMG0uLRWE8GDBSIdIQdP8d7rPdD8/zwgC6rLQ+s8m1K7wPxvPSLOLw8l8ElhWvJdUzTD99R/pLikwjSfRBWzflKUQaRwnQ98TmB9dpyZ2+NLePs9+zH7gXwF7LXtle6Yn6/AvRHCksNzlQQ+1Jt0yIS3FGtT3IMUcj8xKkAUDwq9/E0E3E7rohtTSzQbUru6bEMtEr4MnwMAJ6E8MjMjIIPqlGoUuwTMZJDEPaOLYrTxxyC/352Ojl2PjKyr/ut82znbNht+e+y8l+10nnW/jSCccaWiq8NztCTUmVTOZLSUf8Pm0zNSUQFdMDZvKr4YLStMXqu6a1OrPItDq6SMN7zzDepe4AAFsR0CGFMLg8xkU4S8ZMWkoWREw6fi1VHpoNLfzw6svak8wEwbe4GrRrs7O2xb1EyKbVOeUu9qUHtxiCKDU2GUGfSGNMM0wSSDZACDUbJygXAwaO9LHjStQmx/S8OrZQs1+0V7n4wc7NPdyG7ND9Nw/VH84uWjvVRL9KzEzfShJFszs8L1UgwA9c/g3tudw4zkvCj7l4tEmzE7awvMnG19Mv4wT0dwWiFqImojTpP+FHIUxxTMxIY0GXNvkoPBkwCLn2vOUb1qXIDL7dtnazBrSDuLTAK8xR2mrqofsQDdQdDS3xOdVDN0rCTFRLAEYNPfEwTSLjEYwALu+u3ujPn8N1uuW0N7ODtam7WcUS0irh3PFIA4kUuiQFM6w+FEfQS59Md0mCQhw4zipKG1wK5vjN5/XXL8oyv4+3rLO8s763fb+Tym3YUuhy+ecKzRtCK3s4x0KfSahMuUvfRlo+nDI/JAIUvAJS8argotH/xGq7YbU1swO1sbr2w1XQLd+37xgBaxLKIl0xYT05Rm5LvUwSSpNDlDmbLFMdhgwV++Tp19nEy2XAUbjys4KzCLdUvgbJkdZA5kT3vAjAGW8p+jasQfhIfkwOTK9Hmz88NCkmHBbrBHrzreJl02zGbbzutUOzkrTHuZ/Co8423ZXt6P5JENMgqy8KPE9F/UrLTJ9KlkQBO14uVh+uDkT9/uvB22TNpsEhuUe0WLNhtjm9hce+1DPkGfWOBq4XkydtNYNAQkhETFRMcUjOQNE1CygzGBoHpPW25DLV5Md+vYm2YbMwtOy4VMH7zEbbd+u4/CQO1h7uLac6V0R9SslMG0uLRWE8GDBSIdIQdP8d7rPdD8/zwgC6rLQ+s8m1K7wPxvPSLOLw8l8ElhWvJdUzTD99R/pLikwjSfRBWzflKUQaRwnQ98TmB9dpyZ2+NLePs9+zH7gXwF7LXtle6Yn6/AvRHCksNzlQQ+1Jt0yIS3FGtT3IMUcj8xKkAUDwq9/E0E3E7rohtTSzQbUru6bEMtEr4MnwMAJ6E8MjMjIIPqlGoUuwTMZJDEPaOLYrTxxyC/352Ojl2PjKyr/ut82znbNht+e+y8l+10nnW/jSCccaWiq8NztCTUmVTOZLSUf8Pm0zNSUQFdMDZvKr4YLStMXqu6a1OrPItDq6SMN7zzDepe4AAFsR0CGFMLg8xkU4S8ZMWkoWREw6fi1VHpoNLfzw6svak8wEwbe4GrRrs7O2xb1EyKbVOeUu9qUHtxiCKDU2GUGfSGNMM0wSSDZACDUbJygXAwaO9LHjStQmx/S8OrZQs1+0V7n4wc7NPdyG7ND9Nw/VH84uWjvVRL9KzEzfShJFszs8L1UgwA9c/g3tudw4zkvCj7l4tEmzE7awvMnG19Mv4wT0dwWiFqImojTpP+FHIUxxTMxIY0GXNvkoPBkwCLn2vOUb1qXIDL7dtnazBrSDuLTAK8xR2mrqofsQDdQdDS3xOdVDN0rCTFRLAEYNPfEwTSLjEYwALu+u3ujPn8N1uuW0N7ODtam7WcUS0irh3PFIA4kUuiQFM6w+FEfQS59Md0mCQhw4zipKG1wK5vjN5/XXL8oyv4+3rLO8s763fb+Tym3YUuhy+ecKzRtCK3s4x0KfSahMuUvfRlo+nDI/JAIUvAJS8argotH/xGq7YbU1swO1sbr2w1XQLd+37xgBaxLKIl0xYT05Rm5LvUwSSpNDlDmbLFMdhgwV++Tp19nEy2XAUbjys4KzCLdUvgbJkdZA5kT3vAjAGW8p+jasQfhIfkwOTK9Hmz88NCkmHBbrBHrzreJl02zGbbzutUOzkrTHuZ/Co8423ZXt6P5JENMgqy8KPE9F/UrLTJ9KlkQBO14uVh+uDkT9/uvB22TNpsEhuUe0WLNhtjm9hce+1DPkGfWNBqMXdic1NStAykeuS6ZLtUcSQCQ1fifWF/wG0vU45QvWEsn5vkK4RbUmtti6GsN8zmbcH+zU/KgNvR0/LG04qkF7R5dJ5Ud8Qqc53S28HwAQe/8I73/fr9FNxu29/bi8tzi6TcCpyc7VGeTL8xQEHRQSIywwwDpEQldGxEaIQ9E8+zKIJiAYggiA+OrokNowzmvEwL2Huue62b4mxmvQH92Y6xX7xwrgGZonPTMzPAZCbERHQ6g+0DYpLEAfwxBzARvyhONx1ozLZsNmvs68sL7xw0jMRtdX5Mzy5QHbEOceUCt0Nc08/EDNQTc/XjmTMEslHxi8CeX6W+zf3iTTwsk1w9G/wL8Bw2fJm9Ig3lzroPktCEQWKSM0LtQ2mDw2P44+qjrCMzMqfB47ESAD5/RL5wDbqNDKyMzD78FIw8PHIs8C2d/kGfIAAN0N+BqkJkgwZTehO8Q8wzq6Ne8tyiPTF6sKAf2J7/Xi69f8zpzIHsWuxE/H3MwI1WbfbOt3+NsF6BLwHlUpjzEzN/g5vDmFNn8w/SdwHWgRggRt99PqXN+d1RjOLMkax/vHv8sz0gDbr+Wx8Wb+JAtGFykiPysSMkg2rTcxNukxESsFIj4XTgvT/nLyz+aD3BXU881tyq7Jv8uA0LLX8uDF65r30wPPD+8aoiRnLNoxtjTVNDoyCC2IJR8cShGaBav5Gu6A42naS9ODzk7Mxszkz3rVPt3H5pTxFv2yCNIT4h1dJtUs9jCLMoMx7S37J/4fYRamC1sAFvVs6urgC9k307nPvc5N0FLUldrB4mjsCPcTAvoMKhcdIGAnkixyL9wvzS1iKdgiiBrhEGUGoPsf8W3nCd9i2M3ThtGn0S3U9Ni63yTowfER/IgGoBDRGaQhsSesK2EtvCzIKa8ktx09FbMLmAF098vtHeXb3WXYANXX0/jUUNix3dLkU+3B9p4AagqgE8obeyJdJzEq1CpAKY0l7R+uGDAQ5gZM/eDzHut741ndCNm/1pvWmdie3HPix+k58lf7pwSvDfkVFh2rIm4mMSjfJ38lMSEyG9ITdQuLAor56fAa6YPied0+2vrYu9l23ALhI+eF7sX2dP8gCFYQqhe8HT0i9STAJZgkjSHLHJIWNw8cB67+XPaU7rznLeIw3vfbndsl3XfgZeWt6/ny6PoOAwILWxK2GMMdQCEAI/AiEiGCHXAYIxLuCjMDWfvG89/s/+Zx4nDfIt6V3sHgh+Sy6f3vE/eU/h0GSw2/EyUZNx3BH6Qg1h9lHXIZNhT2DQcHxv+S+Mvxyuvc5kPjKuGs4M3he+SQ6NXtAvTD+r8Bmgj4DocU/hgkHNEd8R2GHKQZdBUwEB4KjwPe/GD2a/BO60rnlORM44HjL+U86H7suvGq9//9YgSCCgwQuRRMGJkaghv+GhYZ5xWcEW8MqAaTAIH6w/Si72TrPOhV5sTljuan6PDrPfBR9er6ugB3BtQLihBeFB0XphjmGN4XnBVBEvsNBQmiAxr+tfi782zvAeyl6XXofui96R/shO+784v4tP3wAvsHkwx6EIETfxVdFhMWpRQqEsUOpAr/BRUBKfx590TzwO8b7XTr4epm6/nshO/j8uf2WvsAAJsE7wjDDOUPLxKDE9ITGxNqEdcOhgumB2oDDP/E+s32WPOU8KHume2G7WjuL/DC8v31tPm0/ccBuQVVCWwM1w53EDoRGBEUEEAOtAuVCA4FTgGI/e35rPbv89rxhvAB8FHwb/FJ88b1wvgU/JD/BgNLBjIJlwtcDWsOuA5CDhINOgvTCAAG5wK0/478oPkQ9/70hfO28pjyLPNn9Db2gPgk+//96AC8A1QGjwhRCoQLGwwQDGYLKQprCEQG1AM7AZ7+HPzZ+e/3ePaF9SD1TPUE9j334/jg+hf9a/+6AeoD2wV2B6cIYQmbCVYJlwhrB+MFFgQbAhAAD/4y/JD6P/lO+Mj3sfcI+MX43vlB+9r8k/5TAAYCkwPnBPMFqQYDB/8GngbpBesEswNTAt4Aav8H/sj8vfvy+nD6PPpU+rf6XPs5/ED9Yv6Q/7cAzAG/AoQDFARoBH8EWQT8A24DuQLoAQcBIwBI/4H+2P1T/fn8zPzM/Pf8R/23/T7+1f5x/wkAlwASAXYBvgHpAfYB5wG/AYMBNwHjAIwAOADs/6v/ef9X/0X/RP9Q/2f/hP+l/8X/4P/1////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAMABkAKIA3AAIARwBDgHaAIAAAwBu/8v+Lf6j/UD9Ef0j/Xr9Ff7t/vP/EgE0Aj4DFgSkBNYEoQQDBAIDrgEfAHb+0/xc+zX6evlC+Zj5fPri+7H9yf/8ASAEBQZ9B2cIpwgyCAoHQAX2AlcAmP3z+p/40/a69XD1AvZt95j5XPyD/8wC9QW4CNgKJQx6DMwLIQqWB1kEqwDX/Cr59vV/8//xm/Fj8kz0N/fs+iH/gAOwB1gLJg7cD1AQcQ9KDQEK1gUaATD8e/dg8zjwSu7F7bnuHPHB9GL5o/4ZBFMJ4w1mEY4TJxQfE4MQgwxtB6YBpfvk9d/w/+yc6u3pB+vb7TTyvvcK/pYE3QpaEJgUOBf/F9UWyxMaDx0JTQI1+2f0cu7V6fbmFeZN54vqku8B9lX9+ARODL0SuhfbGtcbkxojF8YR5woQA+H6A/Ma7LrmV+M94ovjLOfc7Cr0hPw+BaUNCRXOGnUerx9ZHokaiBTLDO8Dqfq58djpr+PB32bewd++4xDqOvKY+2gF4w5BF9EdByKFIyYi/h1eF8cO6QSN+ojwrOez4DPckNrx20LgMOcx8JD6dgUGEGIZxCCQJVsn+SWBIUca3BD+BY36cu+W5cndsNi71hvYudw85BDubflpBQ8RbBumIw4pLivSKRElRR0KEy8Hqfp27pfj79o21erSP9Qi2TXh1usu+D8F/hFgHXcmgiz+LrEtrShWIFAVewjg+pXtr+En2MjRG89e0IDVG96E6dT2+QTSEj0fNinrL8sylDFWLHkjrRfjCTT7zuze33HVZc5Qy3rM0dHu2hvnYPWYBIsTAiHjK0kzlDZ6NQswryYjGmULpPsj7CXeztINy4nHkcgXzq/XmuTQ8xoEKRSvIn0umjZZOmU5yjP3Ka8cAQ0w/JPrhNw90MLHx8OlxFLKX9QC4ibygAOrFEQkBDHfORg+Uj2VN1AtUx+5Dtj8Huv72sDNhMQKwLfAgsb90FPfYfDKAhMVwCV3MxY90kFBQWk7uzANIosQnP3E6ovZV8tTwVS8xrypworNjtyC7vgBXhUkJ9Y1QECFRTJFRz81NN0kdxJ8/obqNNgDyTG+o7jVuMe+B8qy2YnsCgGOFW4oIDhbQzJJJUktQ8A3xCd9FHj/ZOr21sPGHbv7tOK03Lp0xsHWduoAAJYVbynxOcZF+ksOTABGTDrlKRwWjADw6gfXbMZ1uhq037PHuVnFptVe6ej+iRSCKDc5T0XQSzNMcUYBO84qKBekAf7r9dcmx+66R7S8s1e5psS+1FLo0P16E5MnezjVRKFLVEzfRrM7tiszGLwCDe3l2OTHart4tJ2z7Lj2w9fTSee4/GsSoia8N1dEbktxTElHYTybLDwZ0wMd7tfZpcjqu6y0grODuEjD89JA5qH7WxGvJfo21UM4S4pMr0cNPX4tRBrrBC7vy9ppyW285bRrsx+4n8IS0jnlifpJELokNTZQQ/1Kn0wSSLU9Xi5KGwMGQPDB2y/K9LwhtVizvrf4wTLRM+Ry+TcPwyNtNcdCv0qwTHFIWj48L08cGgdS8bnc+Mp+vWG1SbNht1TBVdAv41v4JA7KIqI0O0J9Sr1MzEj8PhgwUx0wCGbys93Eywy+prU+swi3tMB7zyziRPcQDdAh1TOsQTdKxkwjSZs/8TBVHkcJevOu3pPMnb7utTezs7YXwKPOKuEu9vwL0yAFMxlB7UnLTHdJNkDIMVYfXAqO9KvfZM0yvzq2NLNhtn2/zs0r4Bn15wrVHzIyg0CfScxMxknOQJwyVSByC6T1quA4zsq/ibY1sxO25777zC3fBPTSCdYeXTHpP01JyUwSSmNBbTNSIYYMufar4Q/PZcDdtjqzybVUvivMMN7w8rwI1B2FMEw/+EjCTFpK9EE8NE0img3Q963i6M8EwTS3Q7ODtcW9Xss23dzxpQfRHKsvrD6fSLdMn0qCQgg1RyOuDub4sePE0KbBj7dQs0G1Ob2Tyj3cyfCOBs0bzi4IPkJIqEzfSgxD0TU/JMAP/fm25KLRS8Lut2GzA7WwvMvJRtu373cFxxruLWE94UeVTBtLk0OXNjUl0hAV+7zlgtLzwlG4drPItCu8BslR2qXuXwTAGQ0tuDx9R35MVEsWRFs3KSbjES38xOZl05/Dt7iPs5K0qbtEyF7Zle1IA7cYKSwKPBRHY0yIS5ZEHDgbJ/MSRP3N50rUTcQhuayzX7Qru4XHbdiG7DACrhdCK1o7qUZETLlLEkXaOAsoAhRc/tjoMtX/xI+5zbMwtLG6ycZ+13frGAGiFloqpzo5RiFM5kuLRZQ5+SgQFXT/5Okb1rTFALryswa0OroPxpHWauoAAJYVbynxOcZF+ksOTABGTDrlKRwWjADw6gfXbMZ1uhq037PHuVnFptVe6ej+iRSCKDc5T0XQSzNMcUYBO84qKBekAf7r9dcmx+66R7S8s1e5psS+1FLo0P16E5MnezjVRKFLVEzfRrM7tiszGLwCDe3l2OTHart4tJ2z7Lj2w9fTSee4/GsSoia8N1dEbktxTElHYTybLDwZ0wMd7tfZpcjqu6y0grODuEjD89JA5qH7WxGvJfo21UM4S4pMr0cNPX4tRBrrBC7vy9ppyW285bRrsx+4n8IS0jnlifpJELokNTZQQ/1Kn0wSSLU9Xi5KGwMGQPDB2y/K9LwhtVizvrf4wTLRM+Ry+TcPwyNtNcdCv0qwTHFIWj48L08cGgdS8bnc+Mp+vWG1SbNht1TBVdAv41v4JA7KIqI0O0J9Sr1MzEj8PhgwUx0wCGbys93Eywy+prU+swi3tMB7zyziRPcQDdAh1TOsQTdKxkwjSZs/8TBVHkcJevOu3pPMnb7utTezs7YXwKPOKuEu9vwL0yAFMxlB7UnLTHdJNkDIMVYfXAqO9KvfZM0yvzq2NLNhtn2/zs0r4Bn15wrVHzIyg0CfScxMxknOQJwyVSByC6T1quA4zsq/ibY1sxO25777zC3fBPTSCdYeXTHpP01JyUwSSmNBbTNSIYYMufar4Q/PZcDdtjqzybVUvivMMN7w8rwI1B2FMEw/+EjCTFpK9EE8NE0img3Q963i6M8EwTS3Q7ODtcW9Xss23dzxpQfRHKsvrD6fSLdMn0qCQgg1RyOuDub4sePE0KbBj7dQs0G1Ob2Tyj3cyfCOBs0bzi4IPkJIqEzfSgxD0TU/JMAP/fm25KLRS8Lut2GzA7WwvMvJRtu373cFxxruLWE94UeVTBtLk0OXNjUl0hAV+7zlgtLzwlG4drPItCu8BslR2qXuXwTAGQ0tuDx9R35MVEsWRFs3KSbjES38xOZl05/Dt7iPs5K0qbtEyF7Zle1IA7cYKSwKPBRHY0yIS5ZEHDgbJ/MSRP3N50rUTcQhuayzX7Qru4XHbdiG7DACrhdCK1o7qUZETLlLEkXaOAsoAhRc/tjoMtX/xI+5zbMwtLG6ycZ+13frGAGiFloqpzo5RiFM5kuLRZQ5+SgQFXT/5Okb1rTFALryswa0OroPxpHWauoAAJYVbynxOcZF+ksOTABGTDrlKRwWjADw6gfXbMZ1uhq037PHuVnFptVe6ej+iRSCKDc5T0XQSzNMcUYBO84qKBekAf7r9dcmx+66R7S8s1e5psS+1FLo0P16E5MnezjVRKFLVEzfRrM7tiszGLwCDe3l2OTHart4tJ2z7Lj2w9fTSee4/GsSoia8N1dEbktxTElHYTybLDwZ0wMd7tfZpcjqu6y0grODuEjD89JA5qH7WxGvJfo21UM4S4pMr0cNPX4tRBrrBC7vy9ppyW285bRrsx+4n8IS0jnlifpJELokNTZQQ/1Kn0wSSLU9Xi5KGwMGQPDB2y/K9LwhtVizvrf4wTLRM+Ry+TcPwyNtNcdCv0qwTHFIWj48L08cGgdS8bnc+Mp+vWG1SbNht1TBVdAv41v4JA7KIqI0O0J9Sr1MzEj8PhgwUx0wCGbys93Eywy+prU+swi3tMB7zyziRPcQDdAh1TOsQTdKxkwjSZs/8TBVHkcJevOu3pPMnb7utTezs7YXwKPOKuEu9vwL0yAFMxlB7UnLTHdJNkDIMVYfXAqO9KvfZM0yvzq2NLNhtn2/zs0r4Bn15wrVHzIyg0CfScxMxknOQJwyVSByC6T1quA4zsq/ibY1sxO25777zC3fBPTSCdYeXTHpP01JyUwSSmNBbTNSIYYMufar4Q/PZcDdtjqzybVUvivMMN7w8rwI1B2FMEw/+EjCTFpK9EE8NE0img3Q963i6M8EwTS3Q7ODtcW9Xss23dzxpQfRHKsvrD6fSLdMn0qCQgg1RyOuDub4sePE0KbBj7dQs0G1Ob2Tyj3cyfCOBs0bzi4IPkJIqEzfSgxD0TU/JMAP/fm25KLRS8Lut2GzA7WwvMvJRtu373cFxxruLWE94UeVTBtLk0OXNjUl0hAV+7zlgtLzwlG4drPItCu8BslR2qXuXwTAGQ0tuDx9R35MVEsWRFs3KSbjES38xOZl05/Dt7iPs5K0qbtEyF7Zle1IA7cYKSwKPBRHY0yIS5ZEHDgbJ/MSRP3N50rUTcQhuayzX7Qru4XHbdiG7DACrhdCK1o7qUZETLlLEkXaOAsoAhRc/tjoMtX/xI+5zbMwtLG6ycZ+13frGAGiFloqpzo5RiFM5kuLRZQ5+SgQFXT/5Okb1rTFALryswa0OroPxpHWauoAAJYVbynxOcZF+ksOTABGTDrlKRwWjADw6gfXbMZ1uhq037PHuVnFptVe6ej+iRSCKDc5T0XQSzNMcUYBO84qKBekAf7r9dcmx+66R7S8s1e5psS+1FLo0P16E5MnezjVRKFLVEzfRrM7tiszGLwCDe3l2OTHart4tJ2z7Lj2w9fTSee4/GsSoia8N1dEbktxTElHYTybLDwZ0wMd7tfZpcjqu6y0grODuEjD89JA5qH7WxGvJfo21UM4S4pMr0cNPX4tRBrrBC7vy9ppyW285bRrsx+4n8IS0jnlifpJELokNTZQQ/1Kn0wSSLU9Xi5KGwMGQPDB2y/K9LwhtVizvrf4wTLRM+Ry+TcPwyNtNcdCv0qwTHFIWj48L08cGgdS8bnc+Mp+vWG1SbNht1TBVdAv41v4JA7KIqI0O0J9Sr1MzEj8PhgwUx0wCGbys93Eywy+prU+swi3tMB7zyziRPcQDdAh1TOsQTdKxkwjSZs/8TBVHkcJevOu3pPMnb7utTezs7YXwKPOKuEu9vwL0yAFMxlB7UnLTHdJNkDIMVYfXAqO9KvfZM0yvzq2NLNhtn2/zs0r4Bn15wrVHzIyg0CfScxMxknOQJwyVSByC6T1quA4zsq/ibY1sxO25777zC3fBPTSCdYeXTHpP01JyUwSSmNBbTNSIYYMufar4Q/PZcDdtjqzybVUvivMMN7w8rwI1B2FMEw/+EjCTFpK9EE8NE0img3Q963i6M8EwTS3Q7ODtcW9Xss23dzxpQfRHKsvrD6fSLdMn0qCQgg1RyOuDub4sePE0KbBj7dQs0G1Ob2Tyj3cyfCOBs0bzi4IPkJIqEzfSgxD0TU/JMAP/fm25KLRS8Lut2GzA7WwvMvJRtu373cFxxruLWE94UeVTBtLk0OXNjUl0hAV+7zlgtLzwlG4drPItCu8BslR2qXuXwTAGQ0tuDx9R35MVEsWRFs3KSbjES38xOZl05/Dt7iPs5K0qbtEyF7Zle1IA7cYKSwKPBRHY0yIS5ZEHDgbJ/MSRP3N50rUTcQhuayzX7Qru4XHbdiG7DACrhdCK1o7qUZETLlLEkXaOAsoAhRc/tjoMtX/xI+5zbMwtLG6ycZ+13frGAGiFloqpzo5RiFM5kuLRZQ5+SgQFXT/5Okb1rTFALryswa0OroPxpHWauoAAJYVbynxOcZF+ksOTABGTDrlKRwWjADw6gfXbMZ1uhq037PHuVnFptVe6ej+iRSCKDc5T0XQSzNMcUYBO84qKBekAf7r9dcmx+66R7S8s1e5psS+1FLo0P16E5MnezjVRKFLVEzfRrM7tiszGLwCDe3l2OTHart4tJ2z7Lj2w9fTSee4/GsSoia8N1dEbktxTElHYTybLDwZ0wMd7tfZpcjqu6y0grODuEjD89JA5qH7WxGvJfo21UM4S4pMr0cNPX4tRBrrBC7vy9ppyW285bRrsx+4n8IS0jnlifpJELokNTZQQ/1Kn0wSSLU9Xi5KGwMGQPDB2y/K9LwhtVizvrf4wTLRM+Ry+TcPwyNtNcdCv0qwTHFIWj48L08cGgdS8bnc+Mp+vWG1SbNht1TBVdAv41v4JA7KIqI0O0J9Sr1MzEj8PhgwUx0wCGbys93Eywy+prU+swi3tMB7zyziRPcQDdAh1TOsQTdKxkwjSZs/8TBVHkcJevOu3pPMnb7utTezs7YXwKPOKuEu9vwL0yAFMxlB7UnLTHdJNkDIMVYfXAqO9KvfZM0yvzq2NLNhtn2/zs0r4Bn15wrVHzIyg0CfScxMxknOQJwyVSByC6T1quA4zsq/ibY1sxO25777zC3fBPTSCdYeXTHpP01JyUwSSmNBbTNSIYYMufar4Q/PZcDdtjqzybVUvivMMN7w8rwI1B2FMEw/+EjCTFpK9EE8NE0img3Q963i6M8EwTS3Q7ODtcW9Xss23dzxpQfRHKsvrD6fSLdMn0qCQgg1RyOuDub4sePE0KbBj7dQs0G1Ob2Tyj3cyfCOBs0bzi4IPkJIqEzfSgxD0TU/JMAP/fm25KLRS8Lut2GzA7WwvMvJRtu373cFxxruLWE94UeVTBtLk0OXNjUl0hAV+7zlgtLzwlG4drPItCu8BslR2qXuXwTAGQ0tuDx9R35MVEsWRFs3KSbjES38xOZl05/Dt7iPs5K0qbtEyF7Zle1IA7cYKSwKPBRHY0yIS5ZEHDgbJ/MSRP3N50rUTcQhuayzX7Qru4XHbdiG7DACrhdCK1o7qUZETLlLEkXaOAsoAhRc/tjoMtX/xI+5zbMwtLG6ycZ+13frGAGiFloqpzo5RiFM5kuLRZQ5+SgQFXT/5Okb1rTFALryswa0OroPxpHWauoAAJYVbynxOcZF+ksOTABGTDrlKRwWjADw6gfXbMZ1uhq037PHuVnFptVe6ej+iRSCKDc5T0XQSzNMcUYBO84qKBekAf7r9dcmx+66R7S8s1e5psS+1FLo0P16E5MnezjVRKFLVEzfRrM7tiszGLwCDe3l2OTHart4tJ2z7Lj2w9fTSee4/GsSoia8N1dEbktxTElHYTybLDwZ0wMd7tfZpcjqu6y0grODuEjD89JA5qH7WxGvJfo21UM4S4pMr0cNPX4tRBrrBC7vy9ppyW285bRrsx+4n8IS0jnlifpJELokNTZQQ/1Kn0wSSLU9Xi5KGwMGQPDB2y/K9LwhtVizvrf4wTLRM+Ry+TcPwyNtNcdCv0qwTHFIWj48L08cGgdS8bnc+Mp+vWG1SbNht1TBVdAv41v4JA7KIqI0O0J9Sr1MzEj8PhgwUx0wCGbys93Eywy+prU+swi3tMB7zyziRPcQDdAh1TOsQTdKxkwjSZs/8TBVHkcJevOu3pPMnb7utTezs7YXwKPOKuEu9vwL0yAFMxlB7UnLTHdJNkDIMVYfXAqO9KvfZM0yvzq2NLNhtn2/zs0r4Bn15wrVHzIyg0CfScxMxknOQJwyVSByC6T1quA4zsq/ibY1sxO25777zC3fBPTSCdYeXTHpP01JyUwSSmNBbTNSIYYMufar4Q/PZcDdtjqzybVUvivMMN7w8rwI1B2FMEw/+EjCTFpK9EE8NE0img3Q963i6M8EwTS3Q7ODtcW9Xss23dzxpQfRHKsvrD6fSLdMn0qCQgg1RyOuDub4sePE0KbBj7dQs0G1Ob2Tyj3cyfCOBs0bzi4IPkJIqEzfSgxD0TU/JMAP/fm25KLRS8Lut2GzA7WwvMvJRtu373cFxxruLWE94UeVTBtLk0OXNjUl0hAV+7zlgtLzwlG4drPItCu8BslR2qXuXwTAGQ0tuDx9R35MVEsWRFs3KSbjES38xOZl05/Dt7iPs5K0qbtEyF7Zle1IA7cYKSwKPBRHY0yIS5ZEHDgbJ/MSRP3N50rUTcQhuayzX7Qru4XHbdiG7DACrhdCK1o7qUZETLlLEkXaOAsoAhRc/tjoMtX/xI+5zbMwtLG6ycZ+13frGAGiFloqpzo5RiFM5kuLRZQ5+SgQFXT/5Okb1rTFALryswa0OroPxpHWauoAAJYVbynxOcZF+ksOTABGTDrlKRwWjADw6gfXbMZ1uhq037PHuVnFptVe6ej+iRSCKDc5T0XQSzNMcUYBO84qKBekAf7r9dcmx+66R7S8s1e5psS+1FLo0P16E5MnezjVRKFLVEzfRrM7tiszGLwCDe3l2OTHart4tJ2z7Lj2w9fTSee4/GsSoia8N1dEbktxTElHYTybLDwZ0wMd7tfZpcjqu6y0grODuEjD89JA5qH7WxGvJfo21UM4S4pMr0cNPX4tRBrrBC7vy9ppyW285bRrsx+4n8IS0jnlifpJELokNTZQQ/1Kn0wSSLU9Xi5KGwMGQPDB2y/K9LwhtVizvrf4wTLRM+Ry+TcPwyNtNcdCv0qwTHFIWj48L08cGgdS8bnc+Mp+vWG1SbNht1TBVdAv41v4JA7KIqI0O0J9Sr1MzEj8PhgwUx0wCGbys93Eywy+prU+swi3tMB7zyziRPcQDdAh1TOsQTdKxkwjSZs/8TBVHkcJevOu3pPMnb7utTezs7YXwKPOKuEu9vwL0yAFMxlB7UnLTHdJNkDIMVYfXAqO9KvfZM0yvzq2NLNhtn2/zs0r4Bn15wrVHzIyg0CfScxMxknOQJwyVSByC6T1quA4zsq/ibY1sxO25777zC3fBPTSCdYeXTHpP01JyUwSSmNBbTNSIYYMufar4Q/PZcDdtjqzybVUvivMMN7w8rwI1B2FMEw/+EjCTFpK9EE8NE0img3Q963i6M8EwTS3Q7ODtcW9Xss23dzxpQfRHKsvrD6fSLdMn0qCQgg1RyOuDub4sePE0KbBj7dQs0G1Ob2Tyj3cyfCOBs0bzi4IPkJIqEzfSgxD0TU/JMAP/fm25KLRS8Lut2GzA7WwvMvJRtu373cFxxruLWE94UeVTBtLk0OXNjUl0hAV+7zlgtLzwlG4drPItCu8BslR2qXuXwTAGQ0tuDx9R35MVEsWRFs3KSbjES38xOZl05/Dt7iPs5K0qbtEyF7Zle1IA7cYKSwKPBRHY0yIS5ZEHDgbJ/MSRP3N50rUTcQhuayzX7Qru4XHbdiG7DACrhdCK1o7qUZETLlLEkXaOAsoAhRc/tjoMtX/xI+5zbMwtLG6ycZ+13frGAGiFloqpzo5RiFM5kuLRZQ5+SgQFXT/5Okb1rTFALryswa0OroPxpHWauoAAJYVbynxOcZF+ksOTABGTDrlKRwWjADw6gfXbMZ1uhq037PHuVnFptVe6ej+iRSCKDc5T0XQSzNMcUYBO84qKBekAf7r9dcmx+66R7S8s1e5psS+1FLo0P16E5MnezjVRKFLVEzfRrM7tiszGLwCDe3l2OTHart4tJ2z7Lj2w9fTSee4/GsSoia8N1dEbktxTElHYTybLDwZ0wMd7tfZpcjqu6y0grODuEjD89JA5qH7WxGvJfo21UM4S4pMr0cNPX4tRBrrBC7vy9ppyW285bRrsx+4n8IS0jnlifpJELokNTZQQ/1Kn0wSSLU9Xi5KGwMGQPDB2y/K9LwhtVizvrf4wTLRM+Ry+TcPwyNtNcdCv0qwTHFIWj48L08cGgdS8bnc+Mp+vWG1SbNht1TBVdAv41v4JA7KIqI0O0J9Sr1MzEj8PhgwUx0wCGbys93Eywy+prU+swi3tMB7zyziRPcQDdAh1TOsQTdKxkwjSZs/8TBVHkcJevOu3pPMnb7utTezs7YXwKPOKuEu9vwL0yAFMxlB7UnLTHdJNkDIMVYfXAqO9KvfZM0yvzq2NLNhtn2/zs0r4Bn15wrVHzIyg0CfScxMxknOQJwyVSByC6T1quA4zsq/ibY1sxO25777zC3fBPTSCdYeXTHpP01JyUwSSmNBbTNSIYYMufar4Q/PZcDdtjqzybVUvivMMN7w8rwI1B2FMEw/+EjCTFpK9EE8NE0img3Q963i6M8EwTS3Q7ODtcW9Xss23dzxpQfRHKsvrD6fSLdMn0qCQgg1RyOuDub4sePE0KbBj7dQs0G1Ob2Tyj3cyfCOBs0bzi4IPkJIqEzfSgxD0TU/JMAP/fm25KLRS8Lut2GzA7WwvMvJRtu373cFxxruLWE94UeVTBtLk0OXNjUl0hAV+7zlgtLzwlG4drPItCu8BslR2qXuXwTAGQ0tuDx9R35MVEsWRFs3KSbjES38xOZl05/Dt7iPs5K0qbtEyF7Zle1IA7cYKSwKPBRHY0yIS5ZEHDgbJ/MSRP3N50rUTcQhuayzX7Qru4XHbdiG7DACrhdCK1o7qUZETLlLEkXaOAsoAhRc/tjoMtX/xI+5zbMwtLG6ycZ+13frGAGiFloqpzo5RiFM5kuLRZQ5+SgQFXT/5Okb1rTFALryswa0OroPxpHWauoAAJYVbynxOcZF+ksOTABGTDrlKRwWjADw6gfXbMZ1uhq037PHuVnFptVe6ej+iRSCKDc5T0XQSzNMcUYBO84qKBekAf7r9dcmx+66R7S8s1e5psS+1FLo0P16E5MnezjVRKFLVEzfRrM7tiszGLwCDe3l2OTHart4tJ2z7Lj2w9fTSee4/GsSoia8N1dEbktxTElHYTybLDwZ0wMd7tfZpcjqu6y0grODuEjD89JA5qH7WxGvJfo21UM4S4pMr0cNPX4tRBrrBC7vy9ppyW285bRrsx+4n8IS0jnlifpJELokNTZQQ/1Kn0wSSLU9Xi5KGwMGQPDB2y/K9LwhtVizvrf4wTLRM+Ry+TcPwyNtNcdCv0qwTHFIWj48L08cGgdS8bnc+Mp+vWG1SbNht1TBVdAv41v4JA7KIqI0O0J9Sr1MzEj8PhgwUx0wCGbys93Eywy+prU+swi3tMB7zyziRPcQDdAh1TOsQTdKxkwjSZs/8TBVHkcJevOu3pPMnb7utTezs7YXwKPOKuEu9vwL0yAFMxlB7UnLTHdJNkDIMVYfXAqO9KvfZM0yvzq2NLNhtn2/zs0r4Bn15wrVHzIyg0CfScxMxknOQJwyVSByC6T1quA4zsq/ibY1sxO25777zC3fBPTSCdYeXTHpP01JyUwSSmNBbTNSIYYMufar4Q/PZcDdtjqzybVUvivMMN7w8rwI1B2FMEw/+EjCTFpK9EE8NE0img3Q963i6M8EwTS3Q7ODtcW9Xss23dzxpQfRHKsvrD6fSLdMn0qCQgg1RyOuDub4sePE0KbBj7dQs0G1Ob2Tyj3cyfCOBs0bzi4IPkJIqEzfSgxD0TU/JMAP/fm25KLRS8Lut2GzA7WwvMvJRtu373cFxxruLWE94UeVTBtLk0OXNjUl0hAV+7zlgtLzwlG4drPItCu8BslR2qXuXwTAGQ0tuDx9R35MVEsWRFs3KSbjES38xOZl05/Dt7iPs5K0qbtEyF7Zle1IA7cYKSwKPBRHY0yIS5ZEHDgbJ/MSRP3N50rUTcQhuayzX7Qru4XHbdiG7DACrhdCK1o7qUZETLlLEkXaOAsoAhRc/tjoMtX/xI+5zbMwtLG6ycZ+13frGAGiFloqpzo5RiFM5kuLRZQ5+SgQFXT/5Okb1rTFALryswa0OroPxpHWauoAAJYVbynxOcZF+ksOTABGTDrlKRwWjADw6gfXbMZ1uhq037PHuVnFptVe6ej+iRSCKDc5T0XQSzNMcUYBO84qKBekAf7r9dcmx+66R7S8s1e5psS+1FLo0P16E5MnezjVRKFLVEzfRrM7tiszGLwCDe3l2OTHart4tJ2z7Lj2w9fTSee4/GsSoia8N1dEbktxTElHYTybLDwZ0wMd7tfZpcjqu6y0grODuEjD89JA5qH7WxGvJfo21UM4S4pMr0cNPX4tRBrrBC7vy9ppyW285bRrsx+4n8IS0jnlifpJELokNTZQQ/1Kn0wSSLU9Xi5KGwMGQPDB2y/K9LwhtVizvrf4wTLRM+Ry+TcPwyNtNcdCv0qwTHFIWj48L08cGgdS8bnc+Mp+vWG1SbNht1TBVdAv41v4JA7KIqI0O0J9Sr1MzEj8PhgwUx0wCGbys93Eywy+prU+swi3tMB7zyziRPcQDdAh1TOsQTdKxkwjSZs/8TBVHkcJevOu3pPMnb7utTezs7YXwKPOKuEu9vwL0yAFMxlB7UnLTHdJNkDIMVYfXAqO9KvfZM0yvzq2NLNhtn2/zs0r4Bn15wrVHzIyg0CfScxMxknOQJwyVSByC6T1quA4zsq/ibY1sxO25777zC3fBPTSCdYeXTHpP01JyUwSSmNBbTNSIYYMufar4Q/PZcDdtjqzybVUvivMMN7w8rwI1B2FMEw/+EjCTFpK9EE8NE0img3R97riC9BGwZe3w7MWtly+5sub3QnyigdjHOUulT1FRzJLDUkHQcozaCJNDhj5fuQo0pDD37natdK3mL+KzJjdYfFKBqUazSxOO/5EGUlOR8Y/IDNjIu0OUPo15jvU1MUlvPW3lLnfwDrNpd3J8BkF9Bi/Kgw5uEL9RohFej5oMk8ifg96++DnRdYSyGu+ErpeuzDC+M3A3UDw9wNPF7oo0TZ0QN9Eu0MkPaQxLCL/D5X8fulF2EvKrsAxvC69i8PDzuvdxu/jArcVvyabNDI+vkLoQcM70jD7IXEQov0Q6zvafczvwlO+BL/xxJvPI95c790BLBTOJG0y8jucQA9AWTr0L7sh1BCg/pTsJtyozi3FdsDgwGDGf9Br3gDv5wCvEugiRTC1OXg+MD7lOAovbCEnEY//C+4I3szQaMebwsLC2Mdw0cHetO4AAD4RDCEkLns3UzxLPGg3Ey4PIWwRbgB1797f6dKhycDEqcRayW3SJd947ij/2w87HwssRDUsOmE64jUQLaQgoRE/AdHwqeH/1NbL58aWxuTKdtOX30ruXv6GDnUd+SkRMwU4cjhTNAEsKyDHEQECIPJp4w3XB84OyYfId8yL1BfgLO6j/T4NuxvvJ+Iw3jV/Nrwy5iqjH94RtAJh8x7lEtkz0DbLfMoTzqvVpeAc7vj8BAwMGu4luC63M4c0HTHAKQ4f5hFYA5T0yOYQ21zSXc12zLbP19ZB4RzuW/zYCmgY9SOSLJAxjDJ1L48obB7fEe4DufVl6AXdgNSDz3POYdEN2OvhKu7O+7kJ0BYEInAqai+NMMYtUye8HckRdATQ9vfp8d6e1qnRdNAU00/ZoeJH7k/7qQhFFR0gVChELYouECwMJv4cpBHrBNn3fevU4LjYztN40s7Um9pl43Pu4PqnB8UTPh4+JiArhSxTKrskNBxxEVIF1Pj27K3izNrx1X/Uj9by2zbkru5/+rQGUhJqHC0k/ih9Ko8oXyNdGy8RqwXB+WPufeTa3BPYiNZW2FPdFOX37i76zwXrEJ4aIiLdJnIoxCb5IXga3xD1BZ76w+9E5uHeM9qU2CPavd7+5U/v7Pn4BJEP3RgdIL8kZibzJIogiBmAEDAGbvsX8QDo4+BQ3KHa99sx4PXmte+4+TAERA4mFx8eoyJXJB0jER+KGBMQWwYv/F7ysund4mresNzQ3a/h+ecp8JT5dgMEDXkVKByKIEgiQSGPHYEXmA94BuH8l/Na69HkguDB3q/fNuMI6avwf/nLAtEL1xM4GnQeNyBgHwQcbBYOD4YGhf3D9PfsveaW4tLgk+HF5CTqPPF5+S8Cqwo/Ek8YYhwlHnkdcBpKFXcOhQYa/uL1ie6i6Kbk5OJ8417mS+va8YH5oQGTCbMQbhZTGhMcjhvTGB4U0g11BqD+9PYP8H/qs+b25Gnl/ud97IbymfkjAYgIMQ+WFEgYARqfGS8X5hIfDVYGF//494vxVOy76AjnWuen6bvtP/O/+bMAiwe7DcUSQhbvF6wXghWiEV8MKAaA/+74+/Ig7r/qGulP6VfrBO8G9PT5UgCcBlEM/RBBFN0VtRXOE1QQkgvsBdn/1vlg9OTvvuwr60jrD+1X8Nr0OPoAALsF8wo9D0QSzRO6ExMS+w63CqEFIwCx+rj1n/G47jvtRO3O7rXxu/WK+r3/5wSgCYcNTRC9Eb0RUBCYDc8JRwVfAH37BfdR86zwSu9D75TwHvOq9uv6if8iBFoI2QtcDq8PvQ+HDioM2gjfBIwAO/xF+Pr0m/JX8UTxYPKR9KX3W/tk/2sDIAc2CnAMow26DbcMsgrZB2gEqgDr/Hn5mfaE9GLzSPMz9A32rPjY+03/wgLyBZwIigqZC7UL4QoxCcsG5AO5AI39oPou+Gb2a/VO9Qz2lPfB+WT8Rf8oAtEEDAerCJEJrgkFCaYHsQVRA7kAIP66+7n5Qvhy91X36/cj+eH6/vxN/5wBvQOGBdMGjAemByMHEgaKBLACqgCl/sj8OfsX+nb5XvnP+bz6Dvym/WP/HgG2AgoEAQWKBZ0FPQV0BFgDAAKMABv/yP2v/OX7dvto+7n7XvxG/Vz+iP+vALwBmQI3A4sDkwNRA84CGQJEAWAAgv+8/hv+q/1z/XP9p/0I/or+IP+8/08A0AA0AXQBkAGIAWABIAHQAHkAJADb/6H/e/9q/2z/fv+a/7v/2v/y////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="></audio>
+
+<div class="decor" aria-hidden="true">
+  <div class="castle">🏰</div>
+  <div class="lamp">🪔</div>
+  <div class="moon">🌙</div>
+  <div class="cloud c1"></div>
+  <div class="cloud c2"></div>
+  <div class="cloud c3"></div>
+  <div class="spark s1"></div>
+  <div class="spark s2"></div>
+  <div class="spark s3"></div>
+  <div class="spark s4"></div>
+</div>
+
+<main class="app">
+  <section class="left">
+    <header class="topbar glass">
+      <div class="brand">
+        <small>✨ Enchanted Party Game</small>
+        <h1>Movie Charades</h1>
+        <p>Disney, Pixar, DreamWorks and more in a magical compact game board.</p>
+      </div>
+      <div class="hud">
+        <div class="hud-card">
+          <div class="icon">⏱</div>
+          <div>
+            <div class="label">Timer</div>
+            <div class="value" id="timerDisplay">Off</div>
+          </div>
+        </div>
+        <div class="hud-card">
+          <div class="icon">🎯</div>
+          <div>
+            <div class="label">Current Team</div>
+            <div class="value" id="currentTeamDisplay">Team 1</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="glass top-scores-panel">
+      <div class="top-scores-title">Teams & Points</div>
+      <div class="top-scores" id="topScores"></div>
+    </section>
+
+    <section class="stage glass">
+      <div class="tabs" id="categoryTabs"></div>
+
+      <div class="bubble-wrap">
+        <div class="bubble-shell">
+          <div class="bubble" id="movieBubble">
+            <span class="bubble-title-decor">✦</span>
+            Choose a category<br>and tap Pick Movie
+            <span class="bubble-title-decor-right">✦</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="action-main" id="pickBtn" type="button">🎬 Pick Movie</button>
+        <button class="pill-btn" id="nextTeamBtn" type="button">➡️ Next Team</button>
+        <button class="pill-btn" id="awardPointBtn" type="button">⭐ +1 Point</button>
+      </div>
+    </section>
+
+    <div class="footer-note">Tip: choose a timer, pick a movie, and keep the title visible after time ends.</div>
+  </section>
+
+  <section class="right">
+    <section class="panel glass">
+      <div class="panel-title">
+        <h2>Timer Options</h2>
+        <span>dropdown + custom</span>
+      </div>
+      <div class="timer-grid">
+        <select id="timerDropdown">
+          <option value="0">Off</option>
+          <option value="10">10s</option>
+          <option value="15">15s</option>
+          <option value="20">20s</option>
+          <option value="30">30s</option>
+          <option value="45">45s</option>
+          <option value="60">60s</option>
+          <option value="75">75s</option>
+          <option value="90">90s</option>
+          <option value="120">120s</option>
+          <option value="150">150s</option>
+          <option value="180">180s</option>
+          <option value="240">240s</option>
+          <option value="300">300s</option>
+        </select>
+
+        <div class="custom-row">
+          <input id="customSeconds" type="number" min="5" max="600" step="5" placeholder="Custom seconds" />
+          <button class="small-btn" id="setCustomBtn" type="button">Set</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel glass">
+      <div class="panel-title">
+        <h2>Game Settings</h2>
+        <span>add teams</span>
+      </div>
+      <div class="team-add">
+        <input id="newTeamInput" maxlength="18" placeholder="Add team name" />
+        <button class="small-btn" id="addTeamBtn" type="button">Add Team</button>
+      </div>
+    </section>
+
+    <section class="teams-panel glass">
+      <div class="panel-title">
+        <h2>Teams & Points</h2>
+        <span>rename, remove, score</span>
+      </div>
+      <div class="team-list" id="teamList"></div>
+    </section>
+  </section>
+</main>
+
+<script>
+const movieSets = {
+  all:["Frozen","Frozen II","Tangled","Moana","Moana 2","Encanto","The Little Mermaid","Beauty and the Beast","Aladdin","Cinderella","The Lion King","Mulan","Hercules","Peter Pan","Snow White and the Seven Dwarfs","Sleeping Beauty","Tarzan","Pocahontas","Lilo & Stitch","Zootopia","Big Hero 6","Wreck-It Ralph","Ralph Breaks the Internet","The Princess and the Frog","Alice in Wonderland","Robin Hood","The Jungle Book","Pinocchio","Dumbo","Bambi","The Aristocats","Lady and the Tramp","Bolt","Meet the Robinsons","Treasure Planet","Atlantis: The Lost Empire","Oliver & Company","The Emperor's New Groove","The Hunchback of Notre Dame","Wish","Toy Story","Toy Story 2","Toy Story 3","Toy Story 4","Finding Nemo","Finding Dory","Monsters, Inc.","Monsters University","Cars","Cars 2","Cars 3","Up","Coco","Inside Out","Inside Out 2","Brave","Ratatouille","The Incredibles","Incredibles 2","Soul","Luca","Turning Red","Elemental","WALL-E","A Bug's Life","Onward","The Good Dinosaur","Lightyear","Shrek","Shrek 2","Shrek the Third","Shrek Forever After","Kung Fu Panda","Kung Fu Panda 2","Kung Fu Panda 3","Kung Fu Panda 4","How to Train Your Dragon","How to Train Your Dragon 2","How to Train Your Dragon: The Hidden World","Madagascar","Madagascar: Escape 2 Africa","Madagascar 3: Europe's Most Wanted","Rise of the Guardians","Trolls","Trolls World Tour","The Croods","The Croods: A New Age","Puss in Boots","Puss in Boots: The Last Wish","Megamind","The Prince of Egypt","The Boss Baby","Abominable","Bee Movie","Monsters vs. Aliens","Sing","Sing 2","Despicable Me","Despicable Me 2","Despicable Me 3","Minions","Minions: The Rise of Gru","The Secret Life of Pets","The Secret Life of Pets 2","The Grinch","Hop","The Lorax","Migration","Anastasia","Paddington","Paddington 2","Matilda","Night at the Museum","Jumanji","Mary Poppins","Peter Rabbit","Stuart Little","Charlie and the Chocolate Factory","The Cat in the Hat","The Polar Express"],
+  disney:["Frozen","Frozen II","Tangled","Moana","Moana 2","Encanto","The Little Mermaid","Beauty and the Beast","Aladdin","Cinderella","The Lion King","Mulan","Hercules","Peter Pan","Snow White and the Seven Dwarfs","Sleeping Beauty","Tarzan","Pocahontas","Lilo & Stitch","Zootopia","Big Hero 6","Wreck-It Ralph","Ralph Breaks the Internet","The Princess and the Frog","Alice in Wonderland","Robin Hood","The Jungle Book","Pinocchio","Dumbo","Bambi","The Aristocats","Lady and the Tramp","Bolt","Meet the Robinsons","Treasure Planet","Atlantis: The Lost Empire","Oliver & Company","The Emperor's New Groove","The Hunchback of Notre Dame","Wish"],
+  pixar:["Toy Story","Toy Story 2","Toy Story 3","Toy Story 4","Finding Nemo","Finding Dory","Monsters, Inc.","Monsters University","Cars","Cars 2","Cars 3","Up","Coco","Inside Out","Inside Out 2","Brave","Ratatouille","The Incredibles","Incredibles 2","Soul","Luca","Turning Red","Elemental","WALL-E","A Bug's Life","Onward","The Good Dinosaur","Lightyear"],
+  dreamworks:["Shrek","Shrek 2","Shrek the Third","Shrek Forever After","Kung Fu Panda","Kung Fu Panda 2","Kung Fu Panda 3","Kung Fu Panda 4","How to Train Your Dragon","How to Train Your Dragon 2","How to Train Your Dragon: The Hidden World","Madagascar","Madagascar: Escape 2 Africa","Madagascar 3: Europe's Most Wanted","Rise of the Guardians","Trolls","Trolls World Tour","The Croods","The Croods: A New Age","Puss in Boots","Puss in Boots: The Last Wish","Megamind","The Prince of Egypt","The Boss Baby","Abominable","Bee Movie","Monsters vs. Aliens"],
+  family:["Sing","Sing 2","Despicable Me","Despicable Me 2","Despicable Me 3","Minions","Minions: The Rise of Gru","The Secret Life of Pets","The Secret Life of Pets 2","The Grinch","Hop","The Lorax","Migration","Anastasia","Paddington","Paddington 2","Matilda","Night at the Museum","Jumanji","Mary Poppins","Peter Rabbit","Stuart Little","Charlie and the Chocolate Factory","The Cat in the Hat","The Polar Express"]
+};
+
+const categories = [
+  { key:"all", label:"All" },
+  { key:"disney", label:"Disney" },
+  { key:"pixar", label:"Pixar" },
+  { key:"dreamworks", label:"DreamWorks" },
+  { key:"family", label:"Family" }
+];
+
+let selectedCategory = "all";
+let selectedTimer = 0;
+let currentTeam = 0;
+let timeLeft = 0;
+let timerId = null;
+let soundUnlocked = false;
+let teams = [{name:"Team 1",score:0}, {name:"Team 2",score:0}];
+
+const categoryTabs = document.getElementById("categoryTabs");
+const movieBubble = document.getElementById("movieBubble");
+const timerDisplay = document.getElementById("timerDisplay");
+const currentTeamDisplay = document.getElementById("currentTeamDisplay");
+const topScores = document.getElementById("topScores");
+const timerDropdown = document.getElementById("timerDropdown");
+const customSeconds = document.getElementById("customSeconds");
+const setCustomBtn = document.getElementById("setCustomBtn");
+const addTeamBtn = document.getElementById("addTeamBtn");
+const newTeamInput = document.getElementById("newTeamInput");
+const teamList = document.getElementById("teamList");
+const pickBtn = document.getElementById("pickBtn");
+const nextTeamBtn = document.getElementById("nextTeamBtn");
+const awardPointBtn = document.getElementById("awardPointBtn");
+const timerEndSound = document.getElementById("timerEndSound");
+
+function init() {
+  renderCategories();
+  renderTeams();
+  renderTopScores();
+  syncHeader();
+
+  categoryTabs.addEventListener("click", onCategoryClick);
+  pickBtn.addEventListener("click", pickMovie);
+  nextTeamBtn.addEventListener("click", nextTeam);
+  awardPointBtn.addEventListener("click", () => changeScore(currentTeam, 1));
+  timerDropdown.addEventListener("change", onTimerChange);
+  setCustomBtn.addEventListener("click", setCustomTimer);
+  addTeamBtn.addEventListener("click", addTeam);
+  newTeamInput.addEventListener("keydown", (e) => { if (e.key === "Enter") addTeam(); });
+  customSeconds.addEventListener("keydown", (e) => { if (e.key === "Enter") setCustomTimer(); });
+  document.addEventListener("touchstart", unlockSound, { passive:true });
+  document.addEventListener("click", unlockSound);
+}
+
+async function unlockSound() {
+  if (soundUnlocked) return;
+  soundUnlocked = true;
+  try {
+    timerEndSound.muted = true;
+    timerEndSound.currentTime = 0;
+    const p = timerEndSound.play();
+    if (p && typeof p.then === "function") await p;
+    timerEndSound.pause();
+    timerEndSound.currentTime = 0;
+    timerEndSound.muted = false;
+  } catch (e) {
+    timerEndSound.muted = false;
+  }
+}
+
+function onCategoryClick(e) {
+  const btn = e.target.closest("[data-category]");
+  if (!btn) return;
+  selectedCategory = btn.dataset.category;
+  renderCategories();
+  const label = categories.find(c => c.key === selectedCategory)?.label || "All";
+  movieBubble.innerHTML = "<span class='bubble-title-decor'>✦</span>Category:<br><span style='font-size:1.08em'>" + escapeHtml(label) + "</span><span class='bubble-title-decor-right'>✦</span>";
+}
+
+function renderCategories() {
+  categoryTabs.innerHTML = categories.map(cat =>
+    `<button class="tab${selectedCategory === cat.key ? " active" : ""}" type="button" data-category="${cat.key}">${cat.label}</button>`
+  ).join("");
+}
+
+function onTimerChange() {
+  selectedTimer = Number(timerDropdown.value);
+  if (!selectedTimer) {
+    stopTimer(false);
+    updateTimerText("Off");
+  } else {
+    updateTimerText(selectedTimer + "s");
+  }
+}
+
+function setCustomTimer() {
+  const value = Number(customSeconds.value);
+  if (!value || value < 5) return;
+  selectedTimer = Math.min(600, value);
+  updateTimerText(selectedTimer + "s");
+  customSeconds.value = "";
+  timerDropdown.value = "0";
+}
+
+function pickMovie() {
+  const list = movieSets[selectedCategory] || movieSets.all;
+  const pick = list[Math.floor(Math.random() * list.length)];
+  movieBubble.innerHTML = "<span class='bubble-title-decor'>✦</span>" + escapeHtml(pick) + "<span class='bubble-title-decor-right'>✦</span>";
+  startTimer();
+}
+
+function startTimer() {
+  stopTimer(false);
+  if (!selectedTimer) {
+    updateTimerText("Off");
+    return;
+  }
+  timeLeft = selectedTimer;
+  updateTimerText(timeLeft + "s");
+  timerId = setInterval(() => {
+    timeLeft -= 1;
+    if (timeLeft > 0) {
+      updateTimerText(timeLeft + "s");
+    } else {
+      updateTimerText("Time's up!");
+      stopTimer(true);
+    }
+  }, 1000);
+}
+
+function stopTimer(playSound) {
+  if (timerId) {
+    clearInterval(timerId);
+    timerId = null;
+  }
+  if (playSound) {
+    playEndSound();
+  }
+}
+
+async function playEndSound() {
+  try {
+    await unlockSound();
+    timerEndSound.pause();
+    timerEndSound.currentTime = 0;
+    timerEndSound.muted = false;
+    const p = timerEndSound.play();
+    if (p && typeof p.catch === "function") p.catch(() => fallbackBeep());
+    if (navigator.vibrate) navigator.vibrate([160,70,160,70,220]);
+  } catch (e) {
+    fallbackBeep();
+    if (navigator.vibrate) navigator.vibrate([160,70,160,70,220]);
+  }
+}
+
+function fallbackBeep() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    if (!window.__charadesAudioCtx) window.__charadesAudioCtx = new AudioCtx();
+    const ctx = window.__charadesAudioCtx;
+    if (ctx.state === "suspended") ctx.resume();
+    const now = ctx.currentTime + 0.02;
+    [880, 1046.5, 1318.5].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const start = now + i * 0.18;
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.18, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.20);
+      osc.connect(gain); gain.connect(ctx.destination); osc.start(start); osc.stop(start + 0.22);
+    });
+  } catch (e) {}
+}
+
+function addTeam() {
+  const name = (newTeamInput.value || "").trim() || `Team ${teams.length + 1}`;
+  teams.push({ name, score:0 });
+  newTeamInput.value = "";
+  renderTeams();
+}
+
+function removeTeam(index) {
+  if (teams.length <= 1) return;
+  teams.splice(index, 1);
+  if (currentTeam >= teams.length) currentTeam = 0;
+  renderTeams();
+}
+
+function renameTeam(index, value) {
+  teams[index].name = value.trim() || `Team ${index + 1}`;
+  syncHeader();
+  renderTeams();
+}
+
+function changeScore(index, amount) {
+  teams[index].score = Math.max(0, teams[index].score + amount);
+  renderTeams();
+}
+
+function nextTeam() {
+  currentTeam = (currentTeam + 1) % teams.length;
+  renderTeams();
+}
+
+function renderTeams() {
+  teamList.innerHTML = teams.map((team, index) => `
+    <div class="team-card${index === currentTeam ? " active" : ""}">
+      <div class="team-info">
+        <div class="team-name">${escapeHtml(team.name)}</div>
+        <div class="team-sub">${index === currentTeam ? "Current turn" : "Waiting"}</div>
+        <div class="team-edit">
+          <input data-rename="${index}" maxlength="18" value="${escapeAttr(team.name)}" />
+          <button class="circle-btn" type="button" data-remove="${index}" title="Remove team">✕</button>
+        </div>
+      </div>
+      <div class="score-box">
+        <div class="score-value">${team.score}</div>
+        <div class="score-actions">
+          <button class="score-btn" type="button" data-minus="${index}">−</button>
+          <button class="score-btn" type="button" data-plus="${index}">+</button>
+        </div>
+      </div>
+    </div>
+  `).join("");
+
+  teamList.querySelectorAll("[data-plus]").forEach(btn => btn.addEventListener("click", () => changeScore(Number(btn.dataset.plus), 1)));
+  teamList.querySelectorAll("[data-minus]").forEach(btn => btn.addEventListener("click", () => changeScore(Number(btn.dataset.minus), -1)));
+  teamList.querySelectorAll("[data-remove]").forEach(btn => btn.addEventListener("click", () => removeTeam(Number(btn.dataset.remove))));
+  teamList.querySelectorAll("[data-rename]").forEach(input => input.addEventListener("input", () => renameTeam(Number(input.dataset.rename), input.value)));
+  renderTopScores();
+  syncHeader();
+}
+
+
+function renderTopScores() {
+  topScores.innerHTML = teams.map((team, index) =>
+    `<div class="top-score-pill${index === currentTeam ? " active" : ""}">
+      <span class="top-score-name">${escapeHtml(team.name)}</span>
+      <span class="top-score-points">${team.score}</span>
+    </div>`
+  ).join("");
+}
+
+function updateTimerText(text) { timerDisplay.textContent = text; }
+function syncHeader() { currentTeamDisplay.textContent = teams[currentTeam]?.name || "Team"; }
+function escapeHtml(value) { return String(value).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c] || c); }
+function escapeAttr(value) { return String(value).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+
+init();
+</script>
+</body>
+</html>
