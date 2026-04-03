@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Movie Charades</title>
+<style>
+:root {
+  --bg1:#090616; --bg2:#171133; --bg3:#251755; --bg4:#3a1f73; --bg5:#5d2da3;
+  --line:rgba(255,255,255,.14); --text:#f8f2ff; --muted:rgba(248,242,255,.74);
+  --gold:#ffe69b; --shadow:0 18px 45px rgba(2,0,12,.40);
+}
+* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body { height:100%; margin:0; }
+body {
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(circle at 14% 22%, rgba(255,156,230,.33), transparent 22%),
+    radial-gradient(circle at 84% 16%, rgba(155,239,255,.24), transparent 20%),
+    radial-gradient(circle at 75% 76%, rgba(214,177,255,.22), transparent 24%),
+    radial-gradient(circle at 20% 82%, rgba(255,230,155,.13), transparent 22%),
+    linear-gradient(180deg,var(--bg1),var(--bg2) 28%,var(--bg3) 58%,var(--bg4) 82%,var(--bg5));
+  overflow:hidden; position:relative;
+}
+body::before {
+  content:""; position:fixed; inset:0; pointer-events:none;
+  background:
+    radial-gradient(circle at 10% 18%, rgba(255,255,255,.8) 0 1.3px, transparent 1.9px),
+    radial-gradient(circle at 18% 36%, rgba(255,255,255,.65) 0 1.2px, transparent 1.8px),
+    radial-gradient(circle at 31% 12%, rgba(255,255,255,.7) 0 1.5px, transparent 2px),
+    radial-gradient(circle at 58% 16%, rgba(255,255,255,.7) 0 1.4px, transparent 2px),
+    radial-gradient(circle at 82% 26%, rgba(255,255,255,.55) 0 1.2px, transparent 1.8px),
+    radial-gradient(circle at 92% 44%, rgba(255,255,255,.7) 0 1.3px, transparent 2px);
+  opacity:.95;
+}
+.decor { position:fixed; inset:0; pointer-events:none; z-index:0; }
+.castle,.moon,.cloud,.spark,.lamp { position:absolute; opacity:.18; user-select:none; }
+.castle { left:3.8vw; bottom:4vh; font-size:min(13vh,74px); }
+.lamp { left:50%; top:6.8vh; transform:translateX(-50%); font-size:min(9vh,54px); opacity:.14; }
+.moon { right:6vw; top:10vh; font-size:min(11vh,66px); }
+.cloud { height:36px; border-radius:999px; background:rgba(255,255,255,.09); }
+.c1 { width:108px; left:10vw; top:22vh; }
+.c2 { width:136px; right:14vw; top:24vh; }
+.c3 { width:92px; left:25vw; bottom:18vh; }
+.spark { width:14px; height:14px; border-radius:50%; background:radial-gradient(circle, rgba(255,255,255,.95), rgba(255,255,255,0)); }
+.s1 { left:20vw; top:14vh; } .s2 { left:72vw; top:20vh; } .s3 { left:61vw; bottom:16vh; } .s4 { left:38vw; top:25vh; }
+
+.app {
+  position:relative; z-index:1; height:100%; width:min(1200px,100%);
+  margin:0 auto; padding:10px; display:grid; grid-template-columns:1.08fr .92fr; gap:10px;
+}
+.glass {
+  background:linear-gradient(180deg, rgba(255,255,255,.11), rgba(255,255,255,.05));
+  border:1px solid var(--line); box-shadow:var(--shadow);
+  backdrop-filter:blur(18px) saturate(130%); -webkit-backdrop-filter:blur(18px) saturate(130%);
+}
+.left,.right { display:grid; gap:10px; min-height:0; }
+.left { grid-template-rows:auto auto 1fr auto; }
+.right { grid-template-rows:auto auto 1fr; }
+
+.topbar {
+  border-radius:28px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:
+    linear-gradient(130deg, rgba(255,255,255,.12), rgba(255,255,255,.04)),
+    radial-gradient(circle at left, rgba(255,156,230,.16), transparent 34%),
+    radial-gradient(circle at right, rgba(155,239,255,.12), transparent 28%);
+}
+.brand small {
+  display:inline-flex; align-items:center; gap:8px; padding:7px 11px; border-radius:999px;
+  background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.11);
+  color:var(--gold); font-size:.72rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase;
+}
+.brand h1 { margin:8px 0 4px; font-size:clamp(1.8rem,4.2vw,3.2rem); line-height:.9; letter-spacing:-.05em; }
+.brand p { margin:0; color:var(--muted); font-size:.92rem; max-width:42ch; line-height:1.3; }
+.hud { display:grid; gap:8px; min-width:220px; }
+.hud-card {
+  padding:10px 12px; border-radius:20px; background:rgba(12,10,27,.52); border:1px solid var(--line);
+  display:grid; grid-template-columns:auto 1fr; gap:8px 10px; align-items:center;
+}
+.hud-card .icon { font-size:1.25rem; }
+.hud-card .label { font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; font-weight:800; }
+.hud-card .value { font-weight:900; font-size:1.1rem; line-height:1; }
+
+.top-scores-panel {
+  border-radius:24px; padding:10px 12px; display:grid; gap:8px;
+}
+.top-scores-title {
+  font-size:.78rem; color:var(--muted); font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+}
+.top-scores {
+  display:flex; gap:8px; overflow:auto; padding-bottom:2px;
+}
+.top-score-pill {
+  flex:0 0 auto; padding:10px 12px; border-radius:16px; border:1px solid var(--line);
+  background:rgba(12,10,27,.52); display:flex; align-items:center; gap:8px; min-width:max-content;
+}
+.top-score-pill.active {
+  border-color:rgba(255,230,155,.55); box-shadow:inset 0 0 0 1px rgba(255,230,155,.22);
+}
+.top-score-name { font-weight:900; font-size:.92rem; }
+.top-score-points { color:var(--gold); font-weight:1000; }
+
+.stage {
+  border-radius:34px; padding:12px; display:grid; grid-template-rows:auto auto 1fr auto; gap:10px; min-height:0;
+  background:radial-gradient(circle at 30% 18%, rgba(255,255,255,.10), transparent 20%), linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04));
+}
+.tabs {
+  display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; width:100%;
+}
+.tab {
+  display:block; width:100%; padding:10px 8px; border:none; border-radius:999px; cursor:pointer;
+  background:linear-gradient(135deg, #fff0b8, #ffafe1 40%, #94ebff 70%, #d0a5ff);
+  box-shadow:0 8px 18px rgba(0,0,0,.18); color:#14091f; font-weight:900; font-size:.84rem;
+}
+.tab.active { outline:2px solid rgba(255,255,255,.44); filter:brightness(1.05); }
+
+.poster-area { display:grid; place-items:center; }
+.poster-card {
+  width:min(72vw,270px); border-radius:30px; overflow:hidden; border:1px solid rgba(255,255,255,.24);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04)),
+    radial-gradient(circle at 18% 14%, rgba(255,230,155,.22), transparent 24%),
+    radial-gradient(circle at 82% 18%, rgba(155,239,255,.18), transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(255,156,230,.18), transparent 34%);
+  box-shadow:0 22px 48px rgba(0,0,0,.36), 0 0 0 1px rgba(255,255,255,.05), 0 0 28px rgba(170,134,255,.18);
+  position:relative;
+}
+.poster-frame { padding:10px; position:relative; }
+.poster-ribbon {
+  position:absolute; left:16px; top:14px; padding:6px 10px; border-radius:999px; background:rgba(18,10,36,.58);
+  border:1px solid rgba(255,255,255,.15); color:#f8f2ff; font-size:.7rem; font-weight:900; letter-spacing:.08em;
+  text-transform:uppercase; box-shadow:0 8px 18px rgba(0,0,0,.18); z-index:2;
+}
+.poster-image {
+  width:100%; aspect-ratio:2/3; object-fit:cover; display:block; border-radius:22px; border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 10px 24px rgba(0,0,0,.28); background:#2b174f;
+}
+.poster-overlay {
+  position:absolute; left:18px; right:18px; bottom:18px; padding:14px 12px 12px; border-radius:18px;
+  background:linear-gradient(180deg, rgba(8,6,20,.12), rgba(8,6,20,.78)), radial-gradient(circle at top, rgba(255,255,255,.08), transparent 55%);
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,.12);
+}
+.poster-label {
+  font-size:.68rem; text-align:center; color:#f2de92; margin-bottom:5px; letter-spacing:.12em; text-transform:uppercase; font-weight:900;
+}
+.poster-name {
+  font-size:1rem; font-weight:1000; color:white; text-align:center; line-height:1.1; text-shadow:0 2px 12px rgba(0,0,0,.35);
+}
+
+.bubble-wrap { display:grid; place-items:center; min-height:0; position:relative; overflow:hidden; padding:4px 0; }
+.bubble-shell {
+  position:relative; display:inline-grid; place-items:center; padding:8px; border-radius:999px;
+  background:rgba(170,134,255,.12); border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 18px 34px rgba(27,6,62,.28), 0 0 34px rgba(140,96,230,.18);
+}
+.bubble {
+  position:relative; min-width:min(60vw,300px); max-width:min(70vw,360px); min-height:74px;
+  padding:15px 52px 16px; border-radius:999px; display:flex; align-items:center; justify-content:center; text-align:center;
+  background:rgba(241,234,255,.92); border:1px solid rgba(255,255,255,.58);
+  box-shadow:0 12px 26px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.78), inset 0 -10px 18px rgba(120,74,196,.09), 0 0 0 3px rgba(164,121,255,.12);
+  color:#26133f; font-size:clamp(1rem,2.8vw,1.45rem); font-weight:1000; line-height:1.08; letter-spacing:-.03em; text-shadow:0 1px 0 rgba(255,255,255,.45); overflow:hidden;
+}
+.bubble-title-decor,.bubble-title-decor-right {
+  position:absolute; top:50%; transform:translateY(-50%); font-size:1rem; font-weight:900; pointer-events:none;
+  color:rgba(110,69,193,.82); text-shadow:0 0 12px rgba(173,145,255,.45);
+}
+.bubble-title-decor { left:18px; } .bubble-title-decor-right { right:18px; }
+
+.actions { display:grid; grid-template-columns:1.2fr .9fr .9fr; gap:8px; }
+.action-main,.pill-btn,.small-btn,.score-btn {
+  border:none; cursor:pointer; color:#14091f; font-weight:900; font-family:inherit;
+  background:linear-gradient(135deg, #ffe69b, #ff9ce6 36%, #9befff 68%, #d7b1ff); box-shadow:0 10px 22px rgba(0,0,0,.20);
+}
+.action-main { padding:14px 16px; border-radius:22px; font-size:1rem; }
+.pill-btn { padding:12px 14px; border-radius:18px; font-size:.94rem; }
+.small-btn { padding:10px 12px; border-radius:14px; font-size:.86rem; }
+.circle-btn {
+  width:40px; height:40px; border:none; border-radius:14px; cursor:pointer; font-size:1rem; display:grid; place-items:center;
+  background:rgba(255,255,255,.08); color:var(--text); border:1px solid var(--line);
+}
+
+.panel,.teams-panel { border-radius:28px; padding:12px; }
+.panel-title { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
+.panel-title h2 { margin:0; font-size:1rem; letter-spacing:-.02em; }
+.panel-title span { font-size:.78rem; color:var(--muted); font-weight:700; }
+
+.timer-grid { display:grid; gap:8px; }
+input,select {
+  width:100%; border:none; outline:none; border-radius:14px; padding:11px 12px;
+  background:rgba(8,6,20,.56); border:1px solid rgba(255,255,255,.12); color:var(--text); font:inherit;
+}
+select {
+  appearance:none; -webkit-appearance:none; padding-right:34px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(248,242,255,.9) 50%),
+    linear-gradient(135deg, rgba(248,242,255,.9) 50%, transparent 50%);
+  background-position:calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px);
+  background-size:6px 6px, 6px 6px; background-repeat:no-repeat;
+}
+input::placeholder { color:rgba(248,242,255,.44); }
+.custom-row { display:flex; flex-wrap:nowrap; align-items:center; gap:8px; width:100%; }
+.custom-row input { flex:1 1 auto; min-width:0; width:auto; }
+.custom-row .small-btn { flex:0 0 auto; white-space:nowrap; min-width:64px; }
+.team-add { display:grid; grid-template-columns:1fr auto; gap:8px; }
+
+.teams-panel { display:grid; grid-template-rows:auto 1fr; gap:10px; min-height:0; }
+.team-list { display:grid; gap:8px; overflow:auto; padding-right:2px; }
+.team-card {
+  border-radius:22px; padding:10px; background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.05));
+  border:1px solid var(--line); display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center;
+}
+.team-card.active { border-color:rgba(255,230,155,.55); box-shadow:inset 0 0 0 1px rgba(255,230,155,.28); }
+.team-info { min-width:0; }
+.team-name { font-weight:900; font-size:1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.team-sub { font-size:.78rem; color:var(--muted); margin-top:2px; }
+.team-edit { display:grid; grid-template-columns:1fr auto; gap:8px; margin-top:7px; }
+.score-box { display:grid; justify-items:center; gap:8px; }
+.score-value { font-size:1.6rem; font-weight:1000; line-height:1; }
+.score-actions { display:flex; gap:6px; }
+.score-btn { width:40px; height:40px; border-radius:14px; font-size:1rem; display:grid; place-items:center; }
+
+.footer-note { font-size:.75rem; color:var(--muted); text-align:center; padding-top:2px; }
+
+@media (max-width:980px) {
+  .app { grid-template-columns:1fr; grid-template-rows:auto auto; overflow:auto; height:auto; min-height:100%; padding-bottom:14px; }
+  body { overflow:auto; }
+}
+@media (max-width:700px) {
+  .app { padding:8px; gap:8px; }
+  .topbar { display:grid; grid-template-columns:1fr; }
+  .hud { grid-template-columns:1fr 1fr; min-width:0; }
+  .tabs { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .actions { grid-template-columns:1fr 1fr; }
+  .actions .action-main { grid-column:1/-1; }
+  .poster-card { width:min(82vw,245px); }
+}
+@media (max-width:430px) {
+  .hud { grid-template-columns:1fr; }
+  .tab { font-size:.8rem; padding:9px 7px; }
+  .score-btn,.circle-btn { width:36px; height:36px; border-radius:12px; }
+  .action-main,.pill-btn { font-size:.9rem; }
+}
+</style>
+</head>
+<body>
+<audio id="timerEndSound" preload="auto" playsinline></audio>
+
+<div class="decor" aria-hidden="true">
+  <div class="castle">🏰</div>
+  <div class="lamp">🪔</div>
+  <div class="moon">🌙</div>
+  <div class="cloud c1"></div>
+  <div class="cloud c2"></div>
+  <div class="cloud c3"></div>
+  <div class="spark s1"></div>
+  <div class="spark s2"></div>
+  <div class="spark s3"></div>
+  <div class="spark s4"></div>
+</div>
+
+<main class="app">
+  <section class="left">
+    <header class="topbar glass">
+      <div class="brand">
+        <small>✨ Enchanted Party Game</small>
+        <h1>Movie Charades</h1>
+        <p>Disney, Pixar, DreamWorks and more in a magical compact game board.</p>
+      </div>
+      <div class="hud">
+        <div class="hud-card">
+          <div class="icon">⏱</div>
+          <div>
+            <div class="label">Timer</div>
+            <div class="value" id="timerDisplay">Off</div>
+          </div>
+        </div>
+        <div class="hud-card">
+          <div class="icon">🎯</div>
+          <div>
+            <div class="label">Current Team</div>
+            <div class="value" id="currentTeamDisplay">Team 1</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="glass top-scores-panel">
+      <div class="top-scores-title">Teams & Points</div>
+      <div class="top-scores" id="topScores"></div>
+    </section>
+
+    <section class="stage glass">
+      <div class="tabs" id="categoryTabs"></div>
+
+      <div class="poster-area">
+        <div class="poster-card">
+          <div class="poster-frame">
+            <div class="poster-ribbon">Magic Pick</div>
+            <img class="poster-image" id="moviePoster" alt="Movie cover" />
+            <div class="poster-overlay">
+              <div class="poster-label">Movie Cover</div>
+              <div class="poster-name" id="posterTitle">Pick a movie</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bubble-wrap">
+        <div class="bubble-shell">
+          <div class="bubble" id="movieBubble">
+            <span class="bubble-title-decor">✦</span>
+            Choose a category<br>and tap Pick Movie
+            <span class="bubble-title-decor-right">✦</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="action-main" id="pickBtn" type="button">🎬 Pick Movie</button>
+        <button class="pill-btn" id="nextTeamBtn" type="button">➡️ Next Team</button>
+        <button class="pill-btn" id="awardPointBtn" type="button">⭐ +1 Point</button>
+      </div>
+    </section>
+
+    <div class="footer-note">This version is rebuilt so buttons work again.</div>
+  </section>
+
+  <section class="right">
+    <section class="panel glass">
+      <div class="panel-title">
+        <h2>Timer Options</h2>
+        <span>dropdown + custom</span>
+      </div>
+      <div class="timer-grid">
+        <select id="timerDropdown">
+          <option value="0">Off</option>
+          <option value="10">10s</option>
+          <option value="15">15s</option>
+          <option value="20">20s</option>
+          <option value="30">30s</option>
+          <option value="45">45s</option>
+          <option value="60">60s</option>
+          <option value="75">75s</option>
+          <option value="90">90s</option>
+          <option value="120">120s</option>
+          <option value="150">150s</option>
+          <option value="180">180s</option>
+          <option value="240">240s</option>
+          <option value="300">300s</option>
+        </select>
+
+        <div class="custom-row">
+          <input id="customSeconds" type="number" min="5" max="600" step="5" placeholder="Custom seconds" />
+          <button class="small-btn" id="setCustomBtn" type="button">Set</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel glass">
+      <div class="panel-title">
+        <h2>Game Settings</h2>
+        <span>add teams</span>
+      </div>
+      <div class="team-add">
+        <input id="newTeamInput" maxlength="18" placeholder="Add team name" />
+        <button class="small-btn" id="addTeamBtn" type="button">Add Team</button>
+      </div>
+    </section>
+
+    <section class="teams-panel glass">
+      <div class="panel-title">
+        <h2>Teams & Points</h2>
+        <span>rename, remove, score</span>
+      </div>
+      <div class="team-list" id="teamList"></div>
+    </section>
+  </section>
+</main>
+
+<script>
+const MOVIES = {
+  all:["Frozen","Frozen II","Tangled","Moana","Moana 2","Encanto","The Little Mermaid","Beauty and the Beast","Aladdin","Cinderella","The Lion King","Mulan","Hercules","Peter Pan","Snow White and the Seven Dwarfs","Sleeping Beauty","Tarzan","Pocahontas","Lilo & Stitch","Zootopia","Big Hero 6","Wreck-It Ralph","Ralph Breaks the Internet","The Princess and the Frog","Alice in Wonderland","Robin Hood","The Jungle Book","Pinocchio","Dumbo","Bambi","The Aristocats","Lady and the Tramp","Bolt","Meet the Robinsons","Treasure Planet","Atlantis: The Lost Empire","Oliver & Company","The Emperor's New Groove","The Hunchback of Notre Dame","Wish","Toy Story","Toy Story 2","Toy Story 3","Toy Story 4","Finding Nemo","Finding Dory","Monsters, Inc.","Monsters University","Cars","Cars 2","Cars 3","Up","Coco","Inside Out","Inside Out 2","Brave","Ratatouille","The Incredibles","Incredibles 2","Soul","Luca","Turning Red","Elemental","WALL-E","A Bug's Life","Onward","The Good Dinosaur","Lightyear","Shrek","Shrek 2","Shrek the Third","Shrek Forever After","Kung Fu Panda","Kung Fu Panda 2","Kung Fu Panda 3","Kung Fu Panda 4","How to Train Your Dragon","How to Train Your Dragon 2","How to Train Your Dragon: The Hidden World","Madagascar","Madagascar: Escape 2 Africa","Madagascar 3: Europe's Most Wanted","Rise of the Guardians","Trolls","Trolls World Tour","The Croods","The Croods: A New Age","Puss in Boots","Puss in Boots: The Last Wish","Megamind","The Prince of Egypt","The Boss Baby","Abominable","Bee Movie","Monsters vs. Aliens","Sing","Sing 2","Despicable Me","Despicable Me 2","Despicable Me 3","Minions","Minions: The Rise of Gru","The Secret Life of Pets","The Secret Life of Pets 2","The Grinch","Hop","The Lorax","Migration","Anastasia","Paddington","Paddington 2","Matilda","Night at the Museum","Jumanji","Mary Poppins","Peter Rabbit","Stuart Little","Charlie and the Chocolate Factory","The Cat in the Hat","The Polar Express","Zombies","Zombies 2","Zombies 3","Descendants","Descendants 2","Descendants 3"],
+  disney:["Frozen","Frozen II","Tangled","Moana","Moana 2","Encanto","The Little Mermaid","Beauty and the Beast","Aladdin","Cinderella","The Lion King","Mulan","Hercules","Peter Pan","Snow White and the Seven Dwarfs","Sleeping Beauty","Tarzan","Pocahontas","Lilo & Stitch","Zootopia","Big Hero 6","Wreck-It Ralph","Ralph Breaks the Internet","The Princess and the Frog","Alice in Wonderland","Robin Hood","The Jungle Book","Pinocchio","Dumbo","Bambi","The Aristocats","Lady and the Tramp","Bolt","Meet the Robinsons","Treasure Planet","Atlantis: The Lost Empire","Oliver & Company","The Emperor's New Groove","The Hunchback of Notre Dame","Wish","Zombies","Zombies 2","Zombies 3","Descendants","Descendants 2","Descendants 3"],
+  pixar:["Toy Story","Toy Story 2","Toy Story 3","Toy Story 4","Finding Nemo","Finding Dory","Monsters, Inc.","Monsters University","Cars","Cars 2","Cars 3","Up","Coco","Inside Out","Inside Out 2","Brave","Ratatouille","The Incredibles","Incredibles 2","Soul","Luca","Turning Red","Elemental","WALL-E","A Bug's Life","Onward","The Good Dinosaur","Lightyear"],
+  dreamworks:["Shrek","Shrek 2","Shrek the Third","Shrek Forever After","Kung Fu Panda","Kung Fu Panda 2","Kung Fu Panda 3","Kung Fu Panda 4","How to Train Your Dragon","How to Train Your Dragon 2","How to Train Your Dragon: The Hidden World","Madagascar","Madagascar: Escape 2 Africa","Madagascar 3: Europe's Most Wanted","Rise of the Guardians","Trolls","Trolls World Tour","The Croods","The Croods: A New Age","Puss in Boots","Puss in Boots: The Last Wish","Megamind","The Prince of Egypt","The Boss Baby","Abominable","Bee Movie","Monsters vs. Aliens"],
+  family:["Sing","Sing 2","Despicable Me","Despicable Me 2","Despicable Me 3","Minions","Minions: The Rise of Gru","The Secret Life of Pets","The Secret Life of Pets 2","The Grinch","Hop","The Lorax","Migration","Anastasia","Paddington","Paddington 2","Matilda","Night at the Museum","Jumanji","Mary Poppins","Peter Rabbit","Stuart Little","Charlie and the Chocolate Factory","The Cat in the Hat","The Polar Express"]
+};
+
+const CATEGORIES = [
+  { key:"all", label:"All" },
+  { key:"disney", label:"Disney" },
+  { key:"pixar", label:"Pixar" },
+  { key:"dreamworks", label:"DreamWorks" },
+  { key:"family", label:"Family" }
+];
+
+let selectedCategory = "all";
+let selectedTimer = 0;
+let currentTeam = 0;
+let timerId = null;
+let timeLeft = 0;
+let teams = [{name:"Team 1", score:0}, {name:"Team 2", score:0}];
+
+const categoryTabs = document.getElementById("categoryTabs");
+const movieBubble = document.getElementById("movieBubble");
+const moviePoster = document.getElementById("moviePoster");
+const posterTitle = document.getElementById("posterTitle");
+const timerDisplay = document.getElementById("timerDisplay");
+const currentTeamDisplay = document.getElementById("currentTeamDisplay");
+const topScores = document.getElementById("topScores");
+const timerDropdown = document.getElementById("timerDropdown");
+const customSeconds = document.getElementById("customSeconds");
+const setCustomBtn = document.getElementById("setCustomBtn");
+const addTeamBtn = document.getElementById("addTeamBtn");
+const newTeamInput = document.getElementById("newTeamInput");
+const teamList = document.getElementById("teamList");
+const pickBtn = document.getElementById("pickBtn");
+const nextTeamBtn = document.getElementById("nextTeamBtn");
+const awardPointBtn = document.getElementById("awardPointBtn");
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"})[c] || c);
+}
+function escapeAttr(value) {
+  return String(value).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+}
+function makePosterFallback(title) {
+  const text = encodeURIComponent(title || "Movie");
+  return "https://placehold.co/400x600/2b174f/f8f2ff?text=" + text;
+}
+function setPoster(title) {
+  posterTitle.textContent = title || "Pick a movie";
+  moviePoster.src = makePosterFallback(title);
+}
+async function fetchMoviePoster(title) {
+  setPoster(title);
+  try {
+    const res = await fetch("https://api.themoviedb.org/3/search/movie?api_key=6f63cb4476c2aa60ed0aadf8c39e4179&query=" + encodeURIComponent(title));
+    const data = await res.json();
+    if (data && Array.isArray(data.results) && data.results.length && data.results[0].poster_path) {
+      moviePoster.src = "https://image.tmdb.org/t/p/w500" + data.results[0].poster_path;
+    }
+  } catch (e) {
+    // keep fallback
+  }
+}
+
+function renderCategories() {
+  categoryTabs.innerHTML = CATEGORIES.map(cat =>
+    `<button class="tab${selectedCategory === cat.key ? " active" : ""}" type="button" data-category="${cat.key}">${cat.label}</button>`
+  ).join("");
+}
+
+function renderTopScores() {
+  topScores.innerHTML = teams.map((team, index) =>
+    `<div class="top-score-pill${index === currentTeam ? " active" : ""}">
+      <span class="top-score-name">${escapeHtml(team.name)}</span>
+      <span class="top-score-points">${team.score}</span>
+    </div>`
+  ).join("");
+}
+
+function renderTeams() {
+  teamList.innerHTML = teams.map((team, index) => `
+    <div class="team-card${index === currentTeam ? " active" : ""}">
+      <div class="team-info">
+        <div class="team-name">${escapeHtml(team.name)}</div>
+        <div class="team-sub">${index === currentTeam ? "Current turn" : "Waiting"}</div>
+        <div class="team-edit">
+          <input data-rename="${index}" maxlength="18" value="${escapeAttr(team.name)}" />
+          <button class="circle-btn" type="button" data-remove="${index}" title="Remove team">✕</button>
+        </div>
+      </div>
+      <div class="score-box">
+        <div class="score-value">${team.score}</div>
+        <div class="score-actions">
+          <button class="score-btn" type="button" data-minus="${index}">−</button>
+          <button class="score-btn" type="button" data-plus="${index}">+</button>
+        </div>
+      </div>
+    </div>
+  `).join("");
+
+  teamList.querySelectorAll("[data-plus]").forEach(btn => btn.addEventListener("click", () => changeScore(Number(btn.dataset.plus), 1)));
+  teamList.querySelectorAll("[data-minus]").forEach(btn => btn.addEventListener("click", () => changeScore(Number(btn.dataset.minus), -1)));
+  teamList.querySelectorAll("[data-remove]").forEach(btn => btn.addEventListener("click", () => removeTeam(Number(btn.dataset.remove))));
+  teamList.querySelectorAll("[data-rename]").forEach(input => input.addEventListener("input", () => renameTeam(Number(input.dataset.rename), input.value)));
+
+  renderTopScores();
+  syncHeader();
+}
+
+function renameTeam(index, value) {
+  teams[index].name = value.trim() || `Team ${index + 1}`;
+  renderTeams();
+}
+function addTeam() {
+  const name = (newTeamInput.value || "").trim() || `Team ${teams.length + 1}`;
+  teams.push({ name, score:0 });
+  newTeamInput.value = "";
+  renderTeams();
+}
+function removeTeam(index) {
+  if (teams.length <= 1) return;
+  teams.splice(index, 1);
+  if (currentTeam >= teams.length) currentTeam = 0;
+  renderTeams();
+}
+function changeScore(index, amount) {
+  teams[index].score = Math.max(0, teams[index].score + amount);
+  renderTeams();
+}
+function nextTeam() {
+  currentTeam = (currentTeam + 1) % teams.length;
+  renderTeams();
+}
+function syncHeader() {
+  currentTeamDisplay.textContent = teams[currentTeam]?.name || "Team";
+}
+
+function onCategoryClick(e) {
+  const btn = e.target.closest("[data-category]");
+  if (!btn) return;
+  selectedCategory = btn.dataset.category;
+  renderCategories();
+  const label = CATEGORIES.find(c => c.key === selectedCategory)?.label || "All";
+  movieBubble.innerHTML = "<span class='bubble-title-decor'>✦</span>Category:<br><span style='font-size:1.08em'>" + escapeHtml(label) + "</span><span class='bubble-title-decor-right'>✦</span>";
+  setPoster(label + " movies");
+}
+
+function onTimerChange() {
+  selectedTimer = Number(timerDropdown.value);
+  if (!selectedTimer) {
+    stopTimer(false);
+    updateTimerText("Off");
+  } else {
+    updateTimerText(selectedTimer + "s");
+  }
+}
+function setCustomTimer() {
+  const value = Number(customSeconds.value);
+  if (!value || value < 5) return;
+  selectedTimer = Math.min(600, value);
+  updateTimerText(selectedTimer + "s");
+  customSeconds.value = "";
+  timerDropdown.value = "0";
+}
+
+function pickMovie() {
+  const list = MOVIES[selectedCategory] || MOVIES.all;
+  const pick = list[Math.floor(Math.random() * list.length)];
+  fetchMoviePoster(pick);
+  movieBubble.innerHTML = "<span class='bubble-title-decor'>✦</span>" + escapeHtml(pick) + "<span class='bubble-title-decor-right'>✦</span>";
+  startTimer();
+}
+
+
+let gameAudioCtx = null;
+
+function ensureAudioContext() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    if (!gameAudioCtx) gameAudioCtx = new AudioCtx();
+    if (gameAudioCtx.state === "suspended") {
+      gameAudioCtx.resume();
+    }
+    return gameAudioCtx;
+  } catch (e) {
+    return null;
+  }
+}
+
+function unlockSound() {
+  ensureAudioContext();
+}
+
+function playEndSound() {
+  try {
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime + 0.02;
+    const notes = [800, 1000];
+    notes.forEach((freq, i) => {
+      const start = now + i * 0.28;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, start);
+
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.24, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.22);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 0.24);
+    });
+
+    if (navigator.vibrate) {
+      navigator.vibrate([140, 60, 140]);
+    }
+  } catch (e) {
+    // no-op
+  }
+}
+
+
+function startTimer() {
+  stopTimer(false);
+  if (!selectedTimer) {
+    updateTimerText("Off");
+    return;
+  }
+  timeLeft = selectedTimer;
+  updateTimerText(timeLeft + "s");
+  timerId = setInterval(() => {
+    timeLeft -= 1;
+    if (timeLeft > 0) {
+      updateTimerText(timeLeft + "s");
+    } else {
+      updateTimerText("Time's up!");
+      stopTimer(true);
+    }
+  }, 1000);
+}
+function stopTimer(playSound) {
+  if (timerId) {
+    clearInterval(timerId);
+    timerId = null;
+  }
+  if (playSound) {
+    playEndSound();
+  }
+}
+function updateTimerText(text) {
+  timerDisplay.textContent = text;
+}
+
+function init() {
+  renderCategories();
+  renderTeams();
+  syncHeader();
+  setPoster("Pick a movie");
+
+  categoryTabs.addEventListener("click", onCategoryClick);
+  pickBtn.addEventListener("click", () => { unlockSound(); pickMovie(); });
+  nextTeamBtn.addEventListener("click", () => { unlockSound(); nextTeam(); });
+  awardPointBtn.addEventListener("click", () => { unlockSound(); changeScore(currentTeam, 1); });
+  timerDropdown.addEventListener("change", () => { unlockSound(); onTimerChange(); });
+  setCustomBtn.addEventListener("click", () => { unlockSound(); setCustomTimer(); });
+  addTeamBtn.addEventListener("click", () => { unlockSound(); addTeam(); });
+  newTeamInput.addEventListener("keydown", (e) => { if (e.key === "Enter") addTeam(); });
+  customSeconds.addEventListener("keydown", (e) => { if (e.key === "Enter") setCustomTimer(); });
+  document.addEventListener("touchstart", unlockSound, { passive:true });
+  document.addEventListener("click", unlockSound);
+}
+
+init();
+</script>
+</body>
+</html>
